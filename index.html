@@ -143,10 +143,65 @@
                 <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Name</label><input type="text" id="ing-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
                 <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Category</label><select id="ing-category" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></select></div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Cost per Unit</label><input type="number" step="0.0001" id="ing-cost" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3"></div>
-                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Unit (kg, L, pcs)</label><input type="text" id="ing-unit" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Retail/Purchase Price ($)</label><input type="number" step="0.01" id="ing-purchase-price" placeholder="e.g. 25.00" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent" oninput="calcIngCost()"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Purchase Quantity</label><input type="number" step="0.01" id="ing-purchase-qty" placeholder="e.g. 10" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent" oninput="calcIngCost()"></div>
                 </div>
-                <button type="submit" class="w-full bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl mt-4">Save Ingredient</button>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Calculated Cost/Unit</label><input type="number" step="0.0001" id="ing-cost" required class="w-full bg-sky-500/10 border border-sky-500/20 rounded-xl p-3 font-bold text-sky-400" readonly></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Unit (kg, L, pcs)</label><input type="text" id="ing-unit" required placeholder="e.g. kg" class="w-full bg-white/5 border border-white/10 rounded-xl p-3"></div>
+                </div>
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="closeModal('ingredientModal')" class="flex-1 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl">Save Ingredient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Product Modal (Menu CRUD) -->
+    <div id="productModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-xl rounded-[40px] p-10 max-h-[90vh] flex flex-col">
+            <h2 class="text-2xl font-black mb-8">Manage Product</h2>
+            <form id="productForm" class="space-y-6 flex-1 overflow-y-auto pr-2 hide-scrollbar">
+                <input type="hidden" id="prod-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Product Name</label><input type="text" id="prod-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Category</label><select id="prod-category" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></select></div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest">Variants</h3><button type="button" onclick="addVariantRow()" class="text-accent text-[10px] font-bold uppercase">+ Add Variant</button></div>
+                    <div id="variant-rows" class="space-y-2"></div>
+                </div>
+
+                <div class="flex gap-4 pt-4 sticky bottom-0 bg-slate-900/50 backdrop-blur-sm -mx-2 px-2 pb-2">
+                    <button type="button" onclick="closeModal('productModal')" class="flex-1 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Restock Modal -->
+    <div id="restockModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-md rounded-[40px] p-10">
+            <h2 class="text-2xl font-black mb-2">Restock Stock</h2>
+            <p id="restock-item-name" class="text-xs font-bold text-accent uppercase tracking-widest mb-8"></p>
+            <form id="restockForm" class="space-y-6">
+                <input type="hidden" id="restock-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Packs / Boxes</label><input type="number" step="0.01" id="restock-packs" value="1" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent" oninput="calcRestock()"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Qty per Pack</label><input type="number" step="0.01" id="restock-qty-per" value="1" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent" oninput="calcRestock()"></div>
+                </div>
+                <div class="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                    <span class="text-[10px] font-black uppercase text-slate-500 block mb-1">Total to Add</span>
+                    <div id="restock-total-preview" class="text-3xl font-black text-emerald-400">0.00</div>
+                    <span id="restock-unit-preview" class="text-[10px] font-bold text-slate-500 uppercase mt-1 block">Units</span>
+                </div>
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="closeModal('restockModal')" class="flex-1 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-emerald-500 text-slate-950 py-4 rounded-xl font-black shadow-xl">Complete Restock</button>
+                </div>
             </form>
         </div>
     </div>

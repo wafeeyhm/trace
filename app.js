@@ -77,7 +77,11 @@ async function renderBackOffice() {
                     <td class="px-8 py-5"><div class="font-bold text-slate-100">${item.name}</div><div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${item.unit}</div></td>
                     <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase">${item.category_name || 'None'}</td>
                     <td class="px-8 py-5"><div class="flex items-center gap-3"><span class="font-black text-sm ${isLow ? 'text-red-400' : 'text-slate-100'}">${parseFloat(item.stock_level).toFixed(2)}</span>${isLow ? '<span class="bg-red-500/10 text-red-500 text-[8px] font-black uppercase px-2 py-1 rounded border border-red-500/20">Low Stock</span>' : ''}</div></td>
-                    <td class="px-8 py-5 text-right space-x-2"><button onclick="editIngredient(${item.id})" class="text-accent p-2"><i class="fas fa-edit"></i></button></td>
+                    <td class="px-8 py-5 text-right space-x-2">
+                        <button onclick="openRestockModal(${item.id})" class="text-emerald-400 p-2 hover:scale-110 transition-transform" title="Restock"><i class="fas fa-plus-circle"></i></button>
+                        <button onclick="editIngredient(${item.id})" class="text-accent p-2"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteIngredient(${item.id})" class="text-red-500 p-2"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>`;
             }).join('');
         } 
@@ -86,8 +90,12 @@ async function renderBackOffice() {
             menuTable.innerHTML = menu.map(item => `<tr class="hover:bg-white/5 transition-colors">
                 <td class="px-8 py-5 font-bold text-slate-100">${item.name}</td>
                 <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase">${item.category_name || 'General'}</td>
-                <td class="px-8 py-5"><div class="space-y-2">${(item.variants || []).map(v => `<div class="flex justify-between items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-[10px] font-black uppercase text-slate-500">${v.name}</span><span class="text-slate-100 font-mono text-[10px]">$${v.price}</span></div>`).join('')}</div></td>
-                <td class="px-8 py-5 text-right"><button onclick="editRecipe(${item.id})" class="text-sky-400 p-2"><i class="fas fa-mortar-pestle"></i></button></td>
+                <td class="px-8 py-5"><div class="space-y-2">${(item.variants || []).map(v => `<div class="flex justify-between items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-[10px] font-black uppercase text-slate-500">${v.name}</span><span class="text-slate-100 font-mono text-[10px]">$${parseFloat(v.price).toFixed(2)}</span></div>`).join('')}</div></td>
+                <td class="px-8 py-5 text-right space-x-2">
+                    <button onclick="editMenuItem(${item.id})" class="text-accent p-2" title="Edit Product"><i class="fas fa-edit"></i></button>
+                    <button onclick="editRecipe(${item.id})" class="text-sky-400 p-2" title="Recipe Builder"><i class="fas fa-mortar-pestle"></i></button>
+                    <button onclick="deleteMenuItem(${item.id})" class="text-red-500 p-2" title="Delete Product"><i class="fas fa-trash"></i></button>
+                </td>
             </tr>`).join('');
         }
 
@@ -174,11 +182,75 @@ if (addBtn) {
     addBtn.onclick = () => {
         if (activeBackOfficeTab === 'ingredients') {
             document.getElementById('ing-id').value = '';
+            document.getElementById('ing-purchase-price').value = '';
+            document.getElementById('ing-purchase-qty').value = '';
+            document.getElementById('ing-cost').value = '0.0000';
             document.getElementById('ingredientForm').reset();
             const catSelect = document.getElementById('ing-category');
             if (catSelect) catSelect.innerHTML = invCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
             openModal('ingredientModal');
-        } else { alert('Feature coming soon! Use setup to seed items.'); }
+        } else if (activeBackOfficeTab === 'menu') {
+            document.getElementById('prod-id').value = '';
+            document.getElementById('productForm').reset();
+            document.getElementById('variant-rows').innerHTML = '';
+            const catSelect = document.getElementById('prod-category');
+            if (catSelect) catSelect.innerHTML = menuCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            addVariantRow();
+            openModal('productModal');
+        } else { alert('Please switch to Ingredients or Menu Setup tab first.'); }
+    };
+}
+
+function calcIngCost() {
+    const price = parseFloat(document.getElementById('ing-purchase-price').value || 0);
+    const qty = parseFloat(document.getElementById('ing-purchase-qty').value || 0);
+    const cost = qty > 0 ? (price / qty) : 0;
+    document.getElementById('ing-cost').value = cost.toFixed(4);
+}
+
+// Menu CRUD Logic
+async function editMenuItem(id) {
+    const item = menu.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('prod-id').value = item.id;
+    document.getElementById('prod-name').value = item.name;
+    const catSelect = document.getElementById('prod-category');
+    if (catSelect) catSelect.innerHTML = menuCats.map(c => `<option value="${c.id}" ${c.id == item.category_id ? 'selected' : ''}>${c.name}</option>`).join('');
+    
+    const varContainer = document.getElementById('variant-rows');
+    varContainer.innerHTML = '';
+    (item.variants || []).forEach(v => addVariantRow(v));
+    openModal('productModal');
+}
+
+async function deleteMenuItem(id) {
+    if (!confirm('Are you sure? This will delete all variants and recipes for this product!')) return;
+    await fetch('api.php?action=delete_menu_item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    refreshAll();
+}
+
+function addVariantRow(data = null) {
+    const container = document.getElementById('variant-rows');
+    const div = document.createElement('div');
+    div.className = 'variant-row flex gap-3 items-center animate-in fade-in slide-in-from-top-2';
+    div.innerHTML = `<input type="text" placeholder="Size/Name" value="${data ? data.name : 'Standard'}" class="var-name flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-accent"><input type="number" step="0.01" placeholder="Price" value="${data ? data.price : ''}" class="var-price w-24 bg-white/5 border border-white/10 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-accent"><button type="button" onclick="this.parentElement.remove()" class="text-red-500 p-2"><i class="fas fa-times"></i></button>`;
+    container.appendChild(div);
+}
+
+const productForm = document.getElementById('productForm');
+if (productForm) {
+    productForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('prod-id').value;
+        const variants = [];
+        document.querySelectorAll('.variant-row').forEach(row => {
+            const name = row.querySelector('.var-name').value;
+            const price = row.querySelector('.var-price').value;
+            if (name && price) variants.push({ name, price });
+        });
+        const data = { id, name: document.getElementById('prod-name').value, category_id: document.getElementById('prod-category').value, variants };
+        await fetch(`api.php?action=${id ? 'update_menu_item' : 'add_menu_item'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        closeModal('productModal'); refreshAll();
     };
 }
 
@@ -284,7 +356,60 @@ async function saveRecipe() {
 
 function toggleTheme() { document.body.classList.toggle('light-mode'); }
 
+// Restock Logic
+function openRestockModal(id) {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('restock-id').value = id;
+    document.getElementById('restock-item-name').textContent = item.name;
+    document.getElementById('restock-packs').value = 1;
+    document.getElementById('restock-qty-per').value = 1;
+    document.getElementById('restock-unit-preview').textContent = item.unit;
+    calcRestock();
+    openModal('restockModal');
+}
+function calcRestock() {
+    const packs = parseFloat(document.getElementById('restock-packs').value || 0);
+    const qtyPer = parseFloat(document.getElementById('restock-qty-per').value || 0);
+    const total = packs * qtyPer;
+    document.getElementById('restock-total-preview').textContent = total.toFixed(2);
+}
+const restockForm = document.getElementById('restockForm');
+if (restockForm) {
+    restockForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('restock-id').value;
+        const packs = document.getElementById('restock-packs').value;
+        const qtyPer = document.getElementById('restock-qty-per').value;
+        const total = parseFloat(packs) * parseFloat(qtyPer);
+        await fetch('api.php?action=restock_item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, amount: total, reason: `Restock: ${packs} packs x ${qtyPer}` }) });
+        closeModal('restockModal'); refreshAll();
+    };
+}
+
 // Ingredient Form
+async function editIngredient(id) {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('ing-id').value = item.id;
+    document.getElementById('ing-name').value = item.name;
+    document.getElementById('ing-cost').value = item.cost_per_unit;
+    document.getElementById('ing-unit').value = item.unit;
+    const catSelect = document.getElementById('ing-category');
+    if (catSelect) {
+        catSelect.innerHTML = invCats.map(c => `<option value="${c.id}" ${c.id == item.category_id ? 'selected' : ''}>${c.name}</option>`).join('');
+    }
+    openModal('ingredientModal');
+}
+
+async function deleteIngredient(id) {
+    if (!confirm('Are you sure you want to delete this ingredient? This may affect recipes!')) return;
+    try {
+        await fetch('api.php?action=delete_inventory_item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+        refreshAll();
+    } catch (e) { alert('Delete failed'); }
+}
+
 const ingForm = document.getElementById('ingredientForm');
 if (ingForm) {
     ingForm.onsubmit = async (e) => {

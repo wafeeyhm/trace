@@ -63,6 +63,23 @@ switch ($action) {
         }
         break;
 
+    case 'restock_item':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $id = $data['id'];
+            $amount = $data['amount'];
+            $reason = $data['reason'] ?? 'Restock';
+
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare("UPDATE inventory_items SET stock_level = stock_level + ? WHERE id = ?")->execute([$amount, $id]);
+                $pdo->prepare("INSERT INTO inventory_logs (inventory_item_id, type, change_amount, reason) VALUES (?, 'restock', ?, ?)")->execute([$id, $amount, $reason]);
+                $pdo->commit();
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) { $pdo->rollBack(); echo json_encode(['error' => $e->getMessage()]); }
+        }
+        break;
+
     // --- Menu Management ---
     case 'get_menu':
         $items = $pdo->query("SELECT m.*, c.name as category_name FROM menu_items m LEFT JOIN menu_categories c ON m.category_id = c.id WHERE m.is_active = 1")->fetchAll();
@@ -87,6 +104,36 @@ switch ($action) {
             $stmt = $pdo->prepare("INSERT INTO menu_items (category_id, name) VALUES (?, ?)");
             $stmt->execute([$data['category_id'], $data['name']]);
             echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+        }
+        break;
+
+    case 'update_menu_item':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("UPDATE menu_items SET category_id = ?, name = ? WHERE id = ?");
+                $stmt->execute([$data['category_id'], $data['name'], $data['id']]);
+                
+                // For simplicity in this demo, we clear and re-add variants if provided
+                if (isset($data['variants'])) {
+                    $pdo->prepare("DELETE FROM menu_variants WHERE menu_item_id = ?")->execute([$data['id']]);
+                    $vStmt = $pdo->prepare("INSERT INTO menu_variants (menu_item_id, name, price) VALUES (?, ?, ?)");
+                    foreach ($data['variants'] as $v) {
+                        $vStmt->execute([$data['id'], $v['name'], $v['price']]);
+                    }
+                }
+                $pdo->commit();
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) { $pdo->rollBack(); echo json_encode(['error' => $e->getMessage()]); }
+        }
+        break;
+
+    case 'delete_menu_item':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $pdo->prepare("DELETE FROM menu_items WHERE id = ?")->execute([$data['id']]);
+            echo json_encode(['success' => true]);
         }
         break;
 
