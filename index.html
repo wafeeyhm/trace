@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace Pro | POS & Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'slate-950': '#020617', 'accent': '#38bdf8' } } } }</script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; overflow: hidden; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .active-tab { border-bottom: 2px solid #38bdf8; color: #38bdf8; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50">
+        <div class="text-accent text-2xl"><i class="fas fa-bolt"></i></div>
+        <nav class="flex flex-col gap-6">
+            <button onclick="showPage('pos')" class="nav-btn text-accent" title="Register"><i class="fas fa-th-large text-xl"></i></button>
+            <button onclick="showPage('backoffice')" class="nav-btn text-slate-500 hover:text-white" title="Management"><i class="fas fa-cog text-xl"></i></button>
+            <button onclick="showPage('analytics')" class="nav-btn text-slate-500 hover:text-white" title="Analytics"><i class="fas fa-chart-bar text-xl"></i></button>
+        </nav>
+        <button onclick="toggleTheme()" class="mt-auto text-slate-500"><i class="fas fa-moon"></i></button>
+    </aside>
+
+    <!-- Page: POS (Register) -->
+    <main id="pos-page" class="flex-1 flex flex-row h-full">
+        <div class="flex-1 flex flex-col h-full bg-slate-950/50">
+            <header class="p-8 flex justify-between items-center border-b border-white/5">
+                <h1 class="text-2xl font-black">Register</h1>
+                <div class="relative w-96"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" placeholder="Search menu..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent transition-all"></div>
+            </header>
+            <div id="product-grid" class="flex-1 p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto hide-scrollbar"></div>
+        </div>
+        <aside class="w-[400px] glass flex flex-col h-full border-l border-white/5">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5"><h2 class="font-black uppercase text-xs tracking-[0.2em]">Ticket</h2><button onclick="clearCart()" class="text-[10px] font-bold text-red-400 hover:text-red-300">Clear</button></div>
+            <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+            <div class="p-8 bg-white/5 border-t border-white/10 space-y-4">
+                <div class="flex justify-between text-2xl font-black pt-4 border-t border-white/5"><span>Total</span><span id="cart-total" class="text-accent">$0.00</span></div>
+                <button onclick="openPayment()" class="w-full bg-accent text-slate-950 py-5 rounded-2xl font-black shadow-xl hover:scale-[1.02] active:scale-95 transition-all mt-4">CHARGE</button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Page: Back Office (Management) -->
+    <main id="backoffice-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950">
+        <header class="mb-12 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl font-black mb-4">Back Office</h1>
+                <div class="flex gap-8 text-xs font-black uppercase tracking-[0.2em]">
+                    <button onclick="switchBackOffice('ingredients')" id="tab-ingredients" class="backoffice-tab active-tab pb-2">Ingredients</button>
+                    <button onclick="switchBackOffice('menu')" id="tab-menu" class="backoffice-tab pb-2">Menu Setup</button>
+                    <button onclick="switchBackOffice('analysis')" id="tab-analysis" class="backoffice-tab pb-2">Menu Analysis</button>
+                    <button onclick="switchBackOffice('logs')" id="tab-logs" class="backoffice-tab pb-2">Stock Logs</button>
+                    <button onclick="switchBackOffice('categories')" id="tab-categories" class="backoffice-tab pb-2">Categories</button>
+                </div>
+            </div>
+            <button id="add-btn" class="bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
+        </header>
+
+        <!-- Sub-Page: Ingredients CRUD -->
+        <div id="bo-ingredients" class="space-y-4">
+            <div class="glass rounded-3xl overflow-hidden">
+                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Ingredient</th><th class="px-8 py-5">Category</th><th class="px-8 py-5">Level</th><th class="px-8 py-5 text-right">Actions</th></tr></thead><tbody id="bo-inv-table" class="divide-y divide-white/5"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Sub-Page: Menu CRUD -->
+        <div id="bo-menu" class="hidden space-y-4">
+            <div class="glass rounded-3xl overflow-hidden">
+                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Product Name</th><th class="px-8 py-5">Category</th><th class="px-8 py-5">Variants</th><th class="px-8 py-5 text-right">Actions</th></tr></thead><tbody id="bo-menu-table" class="divide-y divide-white/5"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Sub-Page: Menu Analysis (Financial View) -->
+        <div id="bo-analysis" class="hidden space-y-4">
+            <div class="glass rounded-3xl overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400">
+                        <tr>
+                            <th class="px-8 py-5">Product / Variant</th>
+                            <th class="px-8 py-5 text-right">Selling Price</th>
+                            <th class="px-8 py-5 text-right">COGS</th>
+                            <th class="px-8 py-5 text-right">Gross Profit</th>
+                            <th class="px-8 py-5 text-right">Margin (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bo-analysis-table" class="divide-y divide-white/5"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sub-Page: Stock Logs -->
+        <div id="bo-logs" class="hidden space-y-4">
+            <div class="glass rounded-3xl overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400">
+                        <tr><th class="px-8 py-5">Timestamp</th><th class="px-8 py-5">Item</th><th class="px-8 py-5 text-right">Change</th><th class="px-8 py-5">Reason</th></tr>
+                    </thead>
+                    <tbody id="bo-logs-table" class="divide-y divide-white/5"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sub-Page: Categories CRUD -->
+        <div id="bo-categories" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="glass p-8 rounded-3xl">
+                <h3 class="font-bold mb-6 text-sky-400 uppercase text-[10px] tracking-widest">Inventory Categories</h3>
+                <div id="bo-inv-cats" class="space-y-2"></div>
+            </div>
+            <div class="glass p-8 rounded-3xl">
+                <h3 class="font-bold mb-6 text-emerald-400 uppercase text-[10px] tracking-widest">Menu Categories</h3>
+                <div id="bo-menu-cats" class="space-y-2"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Page: Analytics -->
+    <div id="analytics-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950">
+        <h1 class="text-4xl font-black mb-12">Performance</h1>
+        <div class="grid grid-cols-3 gap-8 mb-12">
+            <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Revenue</p><h2 id="ana-rev" class="text-4xl font-black">$0.00</h2></div>
+        </div>
+        <div class="glass p-12 rounded-[40px] mb-8"><canvas id="mainChart" height="100"></canvas></div>
+    </div>
+
+    <!-- Modals -->
+    <div id="variantModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6"><div class="glass w-full max-w-md rounded-[40px] p-10 text-center"><h2 id="var-item-name" class="text-2xl font-black mb-6">Choose Size</h2><div id="variant-list" class="space-y-3"></div><button onclick="closeModal('variantModal')" class="mt-8 text-slate-500 text-xs font-bold uppercase">Cancel</button></div></div>
+    
+    <div id="receiptModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[200] hidden items-center justify-center p-6"><div class="bg-white text-slate-950 w-full max-w-xs p-8 rounded-sm shadow-2xl font-mono text-[10px] space-y-4"><div class="text-center border-b border-dashed border-slate-300 pb-4"><h2 class="text-lg font-bold">TRACE PRO</h2><p id="rec-date"></p></div><div id="rec-items" class="space-y-1"></div><div class="border-t border-dashed border-slate-300 pt-4"><div class="flex justify-between font-bold text-sm"><span>TOTAL</span><span id="rec-total"></span></div></div><button onclick="closeModal('receiptModal')" class="w-full bg-slate-950 text-white py-3 rounded-md font-bold mt-4">DONE</button></div></div>
+
+    <!-- CRUD Ingredient Modal -->
+    <div id="ingredientModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-md rounded-[40px] p-10">
+            <h2 class="text-2xl font-black mb-8">Manage Ingredient</h2>
+            <form id="ingredientForm" class="space-y-6">
+                <input type="hidden" id="ing-id">
+                <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Name</label><input type="text" id="ing-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
+                <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Category</label><select id="ing-category" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></select></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Cost per Unit</label><input type="number" step="0.0001" id="ing-cost" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Unit (kg, L, pcs)</label><input type="text" id="ing-unit" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3"></div>
+                </div>
+                <button type="submit" class="w-full bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl mt-4">Save Ingredient</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recipe Builder Modal -->
+    <div id="recipeModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-2xl rounded-[40px] p-10 max-h-[80vh] flex flex-col">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-2xl font-black">Recipe Builder</h2>
+                    <p id="recipe-variant-name" class="text-xs font-bold text-accent uppercase tracking-widest mt-1"></p>
+                </div>
+                <button onclick="addRecipeRow()" class="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">+ Add Ingredient</button>
+            </header>
+            <div id="recipe-rows" class="flex-1 overflow-y-auto space-y-3 pr-2 hide-scrollbar"></div>
+            <div class="mt-8 flex gap-4">
+                <button onclick="closeModal('recipeModal')" class="flex-1 text-slate-500 text-xs font-black uppercase">Cancel</button>
+                <button onclick="saveRecipe()" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl">Update Recipe</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
