@@ -85,6 +85,13 @@ switch ($action) {
 
             $pdo->beginTransaction();
             try {
+                $itemStmt = $pdo->prepare("SELECT name, cost_per_unit FROM inventory_items WHERE id = ?");
+                $itemStmt->execute([$id]);
+                $itemData = $itemStmt->fetch();
+                $total_cost = $amount * $itemData['cost_per_unit'];
+                
+                $pdo->prepare("INSERT INTO expenses (description, amount, expense_date) VALUES (?, ?, CURRENT_DATE)")->execute(["Restock: " . $itemData['name'], $total_cost]);
+
                 $pdo->prepare("UPDATE inventory_items SET stock_level = stock_level + ? WHERE id = ?")->execute([$amount, $id]);
                 $pdo->prepare("INSERT INTO inventory_logs (inventory_item_id, type, change_amount, reason) VALUES (?, 'restock', ?, ?)")->execute([$id, $amount, $reason]);
                 $pdo->commit();
@@ -180,12 +187,81 @@ switch ($action) {
     case 'get_analytics':
         $range = $_GET['range'] ?? 'month';
         $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)";
-        if ($range === 'day') $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)";
-        if ($range === 'year') $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
+        $expense_filter = "AND expense_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)";
+        if ($range === 'day') {
+            $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)";
+            $expense_filter = "AND expense_date >= DATE_SUB(NOW(), INTERVAL 1 DAY)";
+        }
+        if ($range === 'year') {
+            $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
+            $expense_filter = "AND expense_date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
+        }
+        
         $revenue = $pdo->query("SELECT SUM(total_amount) as val FROM orders WHERE 1=1 $filter")->fetch()['val'] ?? 0;
+        $tax_collected = $pdo->query("SELECT SUM(tax_amount) as val FROM orders WHERE 1=1 $filter")->fetch()['val'] ?? 0;
+        
+        // Expenses (Now unified, includes restocks & ad-hoc)
+        $expenses = $pdo->query("SELECT SUM(amount) as val FROM expenses WHERE 1=1 $expense_filter")->fetch()['val'] ?? 0;
+        
         $popularity = $pdo->query("SELECT m.name, SUM(oi.quantity) as total FROM order_items oi JOIN menu_variants mv ON oi.menu_variant_id = mv.id JOIN menu_items m ON mv.menu_item_id = m.id WHERE oi.order_id IN (SELECT id FROM orders WHERE 1=1 $filter) GROUP BY m.id ORDER BY total DESC")->fetchAll();
         $trend = $pdo->query("SELECT DATE(created_at) as day, SUM(total_amount) as rev FROM orders WHERE 1=1 $filter GROUP BY DATE(created_at) ORDER BY day ASC")->fetchAll();
-        echo json_encode(['revenue' => (float)$revenue, 'popularity' => $popularity, 'trend' => $trend]);
+        
+        echo json_encode([
+            'revenue' => (float)$revenue, 
+            'tax_collected' => (float)$tax_collected,
+            'expenses' => (float)$expenses,
+            'net_profit' => (float)($revenue - $expenses),
+            'popularity' => $popularity, 
+            'trend' => $trend
+        ]);
+        break;
+
+    // --- Taxes ---
+    case 'get_taxes':
+        echo json_encode($pdo->query("SELECT * FROM taxes ORDER BY name ASC")->fetchAll());
+        break;
+    case 'add_tax':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO taxes (name, rate) VALUES (?, ?)");
+            $stmt->execute([$data['name'], $data['rate']]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+        }
+        break;
+    case 'toggle_tax':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("UPDATE taxes SET is_active = NOT is_active WHERE id = ?");
+            $stmt->execute([$data['id']]);
+            echo json_encode(['success' => true]);
+        }
+        break;
+    case 'delete_tax':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $pdo->prepare("DELETE FROM taxes WHERE id = ?")->execute([$data['id']]);
+            echo json_encode(['success' => true]);
+        }
+        break;
+
+    // --- Expenses ---
+    case 'get_expenses':
+        echo json_encode($pdo->query("SELECT * FROM expenses ORDER BY expense_date DESC, created_at DESC")->fetchAll());
+        break;
+    case 'add_expense':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO expenses (description, amount, expense_date) VALUES (?, ?, ?)");
+            $stmt->execute([$data['description'], $data['amount'], $data['expense_date']]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+        }
+        break;
+    case 'delete_expense':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $pdo->prepare("DELETE FROM expenses WHERE id = ?")->execute([$data['id']]);
+            echo json_encode(['success' => true]);
+        }
         break;
 
     case 'save_recipe':

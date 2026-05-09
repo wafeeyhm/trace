@@ -1,8 +1,10 @@
 // State
 let menu = []; let inventory = []; let cart = []; 
 let invCats = []; let menuCats = []; let vendors = [];
+let taxes = []; let expenses = [];
 let currentItem = null; let mainChart = null;
 let activeBackOfficeTab = 'ingredients';
+let activePerformanceTab = 'sales';
 
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => { refreshAll(); });
@@ -17,12 +19,14 @@ async function refreshAll() {
             return j;
         };
 
-        const [m, inv, ic, mc, v] = await Promise.all([
+        const [m, inv, ic, mc, v, t, e] = await Promise.all([
             fetchJSON('api.php?action=get_menu'),
             fetchJSON('api.php?action=get_inventory'),
             fetchJSON('api.php?action=get_inventory_categories'),
             fetchJSON('api.php?action=get_menu_categories'),
-            fetchJSON('api.php?action=get_vendors')
+            fetchJSON('api.php?action=get_vendors'),
+            fetchJSON('api.php?action=get_taxes'),
+            fetchJSON('api.php?action=get_expenses')
         ]);
 
         menu = Array.isArray(m) ? m : [];
@@ -30,6 +34,8 @@ async function refreshAll() {
         invCats = Array.isArray(ic) ? ic : [];
         menuCats = Array.isArray(mc) ? mc : [];
         vendors = Array.isArray(v) ? v : [];
+        taxes = Array.isArray(t) ? t : [];
+        expenses = Array.isArray(e) ? e : [];
 
         renderAll();
     } catch (e) {
@@ -46,7 +52,7 @@ function renderAll() {
 
     if (isPOS) { renderGrid(); renderCart(); }
     if (isBO) renderBackOffice();
-    if (isAna) updateAnalytics('month');
+    if (isAna) { renderPerformance(); loadAnalytics('month'); }
 }
 
 // POS Grid
@@ -188,6 +194,52 @@ function switchBackOffice(tab) {
     renderBackOffice();
 }
 
+function switchPerformance(tab) {
+    activePerformanceTab = tab;
+    document.querySelectorAll('.perf-tab').forEach(t => t.classList.remove('active-tab'));
+    const targetTab = document.getElementById(`tab-perf-${tab}`);
+    if (targetTab) targetTab.classList.add('active-tab');
+    
+    ['sales', 'taxes', 'expenses'].forEach(t => {
+        const el = document.getElementById(`perf-${t}`);
+        if (el) el.classList.toggle('hidden', t !== tab);
+    });
+    
+    const addBtn = document.getElementById('add-perf-btn');
+    if (addBtn) addBtn.classList.toggle('hidden', tab === 'sales');
+    
+    renderPerformance();
+}
+
+function renderPerformance() {
+    if (activePerformanceTab === 'taxes') {
+        const tBody = document.getElementById('perf-taxes-table');
+        if (tBody) {
+            tBody.innerHTML = taxes.map(t => `<tr class="hover:bg-white/5 transition-colors">
+                <td class="px-8 py-5 font-bold text-slate-100">${t.name}</td>
+                <td class="px-8 py-5 text-xs text-slate-400 font-bold">${t.rate}%</td>
+                <td class="px-8 py-5 text-xs"><span class="px-2 py-1 rounded ${t.is_active == 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'} uppercase font-black text-[8px]">${t.is_active == 1 ? 'Active' : 'Inactive'}</span></td>
+                <td class="px-8 py-5 text-right space-x-2">
+                    <button onclick="toggleTax(${t.id})" class="text-sky-400 p-2 hover:scale-110"><i class="fas fa-toggle-${t.is_active == 1 ? 'on' : 'off'}"></i></button>
+                    <button onclick="deleteTax(${t.id})" class="text-red-500 p-2 hover:scale-110"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+        }
+    } else if (activePerformanceTab === 'expenses') {
+        const eBody = document.getElementById('perf-expenses-table');
+        if (eBody) {
+            eBody.innerHTML = expenses.map(e => `<tr class="hover:bg-white/5 transition-colors">
+                <td class="px-8 py-5 text-xs text-slate-400 font-mono">${e.expense_date}</td>
+                <td class="px-8 py-5 font-bold text-slate-100">${e.description}</td>
+                <td class="px-8 py-5 text-xs text-red-400 font-bold">$${parseFloat(e.amount).toFixed(2)}</td>
+                <td class="px-8 py-5 text-right space-x-2">
+                    <button onclick="deleteExpense(${e.id})" class="text-red-500 p-2 hover:scale-110"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+        }
+    }
+}
+
 // Modal Logic
 const addBtn = document.getElementById('add-btn');
 if (addBtn) {
@@ -215,6 +267,20 @@ if (addBtn) {
             document.getElementById('vendorForm').reset();
             openModal('vendorModal');
         } else { alert('Please switch to Ingredients, Menu Setup, or Vendors tab first.'); }
+    };
+}
+
+const addPerfBtn = document.getElementById('add-perf-btn');
+if (addPerfBtn) {
+    addPerfBtn.onclick = () => {
+        if (activePerformanceTab === 'taxes') {
+            document.getElementById('taxForm').reset();
+            openModal('taxModal');
+        } else if (activePerformanceTab === 'expenses') {
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+            openModal('expenseModal');
+        }
     };
 }
 
@@ -312,20 +378,36 @@ function renderCart() {
     const totEl = document.getElementById('cart-total');
     if (!c || !totEl) return;
     if (cart.length === 0) { c.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-600 opacity-50"><i class="fas fa-shopping-basket text-4xl mb-4"></i><p class="text-xs font-bold uppercase tracking-widest">Empty Ticket</p></div>`; totEl.textContent = '$0.00'; return; }
+    
     c.innerHTML = cart.map(i => `<div class="flex justify-between items-center animate-in fade-in slide-in-from-right-4"><div><h4 class="font-bold text-sm text-slate-100">${i.name}</h4><p class="text-[10px] text-slate-500 font-bold uppercase">${i.quantity} x $${i.price.toFixed(2)}</p></div><span class="font-black text-sm text-slate-100">$${(i.price * i.quantity).toFixed(2)}</span></div>`).join('');
-    const tot = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-    totEl.textContent = `$${tot.toFixed(2)}`;
+    
+    const subtotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+    const activeTaxes = taxes.filter(t => t.is_active == 1).reduce((sum, t) => sum + parseFloat(t.rate), 0);
+    const taxAmt = subtotal * (activeTaxes / 100);
+    const tot = subtotal + taxAmt;
+    
+    if (taxAmt > 0) {
+        totEl.innerHTML = `<div class="flex flex-col text-right"><span class="text-[10px] text-slate-500 font-normal">Tax: $${taxAmt.toFixed(2)}</span><span>$${tot.toFixed(2)}</span></div>`;
+    } else {
+        totEl.textContent = `$${tot.toFixed(2)}`;
+    }
+    
+    // Store globally for checkout
+    window._currentTotal = tot;
+    window._currentTax = taxAmt;
 }
 
 async function openPayment() {
     if (cart.length === 0) return;
     try {
-        const res = await fetch('api.php?action=process_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cart, total: cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) }) });
+        const res = await fetch('api.php?action=process_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cart, total: window._currentTotal || 0, tax: window._currentTax || 0 }) });
         const d = await res.json();
         if (d.success) {
             document.getElementById('rec-date').textContent = new Date().toLocaleString();
-            document.getElementById('rec-items').innerHTML = cart.map(i => `<div class="flex justify-between"><span>${i.name} x${i.quantity}</span><span>$${(i.price * i.quantity).toFixed(2)}</span></div>`).join('');
-            document.getElementById('rec-total').textContent = document.getElementById('cart-total').textContent;
+            let recHTML = cart.map(i => `<div class="flex justify-between"><span>${i.name} x${i.quantity}</span><span>$${(i.price * i.quantity).toFixed(2)}</span></div>`).join('');
+            if (window._currentTax > 0) recHTML += `<div class="flex justify-between mt-2 pt-2 border-t border-dashed border-slate-300 text-[9px] text-slate-500"><span>TAX</span><span>$${window._currentTax.toFixed(2)}</span></div>`;
+            document.getElementById('rec-items').innerHTML = recHTML;
+            document.getElementById('rec-total').textContent = `$${(window._currentTotal || 0).toFixed(2)}`;
             openModal('receiptModal'); clearCart(); refreshAll();
         } else { alert(d.error || 'Order failed'); }
     } catch (e) { alert('Connection error during checkout'); }
@@ -333,11 +415,23 @@ async function openPayment() {
 function clearCart() { cart = []; renderCart(); }
 
 // Analytics
+async function loadAnalytics(range) {
+    await updateAnalytics(range);
+}
+
 async function updateAnalytics(range) {
     try {
         const d = await fetch(`api.php?action=get_analytics&range=${range}`).then(r => r.json());
         const revEl = document.getElementById('ana-rev');
-        if (revEl) revEl.textContent = `$${(d.revenue || 0).toLocaleString()}`;
+        const taxEl = document.getElementById('ana-tax');
+        const expensesEl = document.getElementById('ana-expenses');
+        const netEl = document.getElementById('ana-net');
+        
+        if (revEl) revEl.textContent = `$${(d.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (taxEl) taxEl.textContent = `$${(d.tax_collected || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (expensesEl) expensesEl.textContent = `$${(d.expenses || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (netEl) netEl.textContent = `$${(d.net_profit || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
         const canvas = document.getElementById('mainChart');
         if (!canvas) return;
         if (mainChart) mainChart.destroy();
@@ -450,4 +544,43 @@ if (ingForm) {
         await fetch(`api.php?action=${id ? 'update_inventory_item' : 'add_inventory_item'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         closeModal('ingredientModal'); refreshAll();
     };
+}
+
+// Tax Form
+const taxForm = document.getElementById('taxForm');
+if (taxForm) {
+    taxForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const data = { name: document.getElementById('tax-name').value, rate: document.getElementById('tax-rate').value };
+        await fetch(`api.php?action=add_tax`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        closeModal('taxModal'); refreshAll();
+    };
+}
+
+async function toggleTax(id) {
+    await fetch('api.php?action=toggle_tax', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    refreshAll();
+}
+
+async function deleteTax(id) {
+    if (!confirm('Delete tax rate?')) return;
+    await fetch('api.php?action=delete_tax', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    refreshAll();
+}
+
+// Expense Form
+const expForm = document.getElementById('expenseForm');
+if (expForm) {
+    expForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const data = { expense_date: document.getElementById('expense-date').value, description: document.getElementById('expense-desc').value, amount: document.getElementById('expense-amount').value };
+        await fetch(`api.php?action=add_expense`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        closeModal('expenseModal'); refreshAll();
+    };
+}
+
+async function deleteExpense(id) {
+    if (!confirm('Delete expense?')) return;
+    await fetch('api.php?action=delete_expense', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    refreshAll();
 }
