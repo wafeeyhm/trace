@@ -6,13 +6,76 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'slate-950': '#020617', 'accent': '#38bdf8' } } } }</script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class', 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        'slate-950': 'rgb(var(--color-bg) / <alpha-value>)', 
+                        'accent': 'rgb(var(--color-accent) / <alpha-value>)',
+                        'slate-100': 'rgb(var(--color-text) / <alpha-value>)',
+                        'white': 'rgb(var(--color-text) / <alpha-value>)',
+                        'slate-400': 'rgb(var(--color-secondary) / <alpha-value>)',
+                        'slate-500': 'rgb(var(--color-secondary) / <alpha-value>)',
+                        'red-400': 'rgb(var(--color-danger) / <alpha-value>)',
+                        'red-500': 'rgb(var(--color-danger) / <alpha-value>)',
+                        'emerald-400': 'rgb(var(--color-success) / <alpha-value>)',
+                        'emerald-500': 'rgb(var(--color-success) / <alpha-value>)',
+                        'sky-400': 'rgb(var(--color-accent) / <alpha-value>)',
+                        'sky-500': 'rgb(var(--color-accent) / <alpha-value>)'
+                    } 
+                } 
+            } 
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; overflow: hidden; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        :root, body[data-theme="cyber-trace"] {
+            --color-bg: 15 23 42;
+            --color-text: 248 250 252;
+            --color-accent: 0 245 255;
+            --color-secondary: 51 65 85;
+            --color-danger: 244 63 94;
+            --color-success: 16 185 129;
+            --color-glass-bg: 30 41 59;
+        }
+
+        body[data-theme="botanical"] {
+            --color-bg: 239 236 229;
+            --color-text: 44 51 51;
+            --color-accent: 95 116 100;
+            --color-secondary: 160 165 159;
+            --color-danger: 217 144 91;
+            --color-success: 95 116 100;
+            --color-glass-bg: 255 255 255;
+        }
+
+        body[data-theme="xau"] {
+            --color-bg: 18 18 18;
+            --color-text: 255 255 255;
+            --color-accent: 197 160 89;
+            --color-secondary: 42 42 42;
+            --color-danger: 239 68 64; 
+            --color-success: 78 159 61;
+            --color-glass-bg: 30 30 30;
+        }
+
+        body[data-theme="desert"] {
+            --color-bg: 255 232 214;
+            --color-text: 63 66 56;
+            --color-accent: 107 112 92;
+            --color-secondary: 165 165 141;
+            --color-danger: 200 80 50; 
+            --color-success: 107 112 92;
+            --color-glass-bg: 240 220 200;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: rgb(var(--color-bg)); color: rgb(var(--color-text)); overflow: hidden; }
+        .glass { background: rgb(var(--color-glass-bg) / 0.7); backdrop-filter: blur(12px); border: 1px solid rgb(var(--color-text) / 0.1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .active-tab { border-bottom: 2px solid #38bdf8; color: #38bdf8; }
+        .active-tab { border-bottom: 2px solid rgb(var(--color-accent)); color: rgb(var(--color-accent)); }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -24,8 +87,8 @@
             <button onclick="showPage('pos')" class="nav-btn text-accent" title="Register"><i class="fas fa-th-large text-xl"></i></button>
             <button onclick="showPage('backoffice')" class="nav-btn text-slate-500 hover:text-white" title="Management"><i class="fas fa-cog text-xl"></i></button>
             <button onclick="showPage('analytics')" class="nav-btn text-slate-500 hover:text-white" title="Analytics"><i class="fas fa-chart-bar text-xl"></i></button>
+            <button onclick="showPage('settings')" class="nav-btn text-slate-500 hover:text-white" title="Settings"><i class="fas fa-sliders-h text-xl"></i></button>
         </nav>
-        <button onclick="toggleTheme()" class="mt-auto text-slate-500"><i class="fas fa-moon"></i></button>
     </aside>
 
     <!-- Page: POS (Register) -->
@@ -173,6 +236,40 @@
         </div>
     </div>
 
+    <!-- Page: Settings -->
+    <div id="settings-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950">
+        <header class="mb-12">
+            <h1 class="text-4xl font-black mb-4">Settings</h1>
+            <p class="text-sm text-slate-500 font-bold uppercase tracking-widest">Theme & Personalization</p>
+        </header>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <button onclick="setTheme('botanical')" class="glass p-8 rounded-3xl hover:scale-105 active:scale-95 transition-all text-left group">
+                <div class="w-12 h-12 rounded-full mb-6 shadow-xl border border-white/20" style="background-color: rgb(95, 116, 100);"></div>
+                <h3 class="text-lg font-black mb-1">Botanical Organic</h3>
+                <p class="text-xs text-slate-500 font-bold">Warm & Inviting</p>
+            </button>
+
+            <button onclick="setTheme('xau')" class="glass p-8 rounded-3xl hover:scale-105 active:scale-95 transition-all text-left group">
+                <div class="w-12 h-12 rounded-full mb-6 shadow-xl border border-white/20" style="background-color: rgb(197, 160, 89);"></div>
+                <h3 class="text-lg font-black mb-1">XAU Premium</h3>
+                <p class="text-xs text-slate-500 font-bold">High-Contrast Gold</p>
+            </button>
+
+            <button onclick="setTheme('cyber-trace')" class="glass p-8 rounded-3xl hover:scale-105 active:scale-95 transition-all text-left group">
+                <div class="w-12 h-12 rounded-full mb-6 shadow-xl border border-white/20" style="background-color: rgb(0, 245, 255);"></div>
+                <h3 class="text-lg font-black mb-1">Cyber-Trace</h3>
+                <p class="text-xs text-slate-500 font-bold">Data & Logic</p>
+            </button>
+
+            <button onclick="setTheme('desert')" class="glass p-8 rounded-3xl hover:scale-105 active:scale-95 transition-all text-left group">
+                <div class="w-12 h-12 rounded-full mb-6 shadow-xl border border-white/20" style="background-color: rgb(107, 112, 92);"></div>
+                <h3 class="text-lg font-black mb-1">Desert Tactical</h3>
+                <p class="text-xs text-slate-500 font-bold">Gritty & Durable</p>
+            </button>
+        </div>
+    </div>
+
     <!-- Modals -->
     <div id="variantModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6"><div class="glass w-full max-w-md rounded-[40px] p-10 text-center"><h2 id="var-item-name" class="text-2xl font-black mb-6">Choose Size</h2><div id="variant-list" class="space-y-3"></div><button onclick="closeModal('variantModal')" class="mt-8 text-slate-500 text-xs font-bold uppercase">Cancel</button></div></div>
     
@@ -315,6 +412,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

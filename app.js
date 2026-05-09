@@ -7,7 +7,11 @@ let activeBackOfficeTab = 'ingredients';
 let activePerformanceTab = 'sales';
 
 // Initial Load
-document.addEventListener('DOMContentLoaded', () => { refreshAll(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    const savedTheme = localStorage.getItem('traceTheme');
+    if (savedTheme) document.body.setAttribute('data-theme', savedTheme);
+    refreshAll(); 
+});
 
 async function refreshAll() {
     try {
@@ -170,10 +174,14 @@ function showPage(p) {
     document.getElementById('backoffice-page').classList.toggle('hidden', p !== 'backoffice');
     document.getElementById('analytics-page').classList.toggle('hidden', p !== 'analytics');
     
+    const settingsPage = document.getElementById('settings-page');
+    if (settingsPage) settingsPage.classList.toggle('hidden', p !== 'settings');
+    
     document.querySelectorAll('.nav-btn').forEach(btn => {
         const isTarget = (p === 'pos' && btn.title === 'Register') || 
                          (p === 'backoffice' && btn.title === 'Management') || 
-                         (p === 'analytics' && btn.title === 'Analytics');
+                         (p === 'analytics' && btn.title === 'Analytics') ||
+                         (p === 'settings' && btn.title === 'Settings');
         btn.classList.toggle('text-accent', isTarget);
         btn.classList.toggle('text-slate-500', !isTarget);
     });
@@ -435,7 +443,33 @@ async function updateAnalytics(range) {
         const canvas = document.getElementById('mainChart');
         if (!canvas) return;
         if (mainChart) mainChart.destroy();
-        mainChart = new Chart(canvas.getContext('2d'), { type: 'line', data: { labels: (d.trend || []).map(x => x.day), datasets: [{ label: 'Revenue', data: (d.trend || []).map(x => x.rev), borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', fill: true, tension: 0.4 }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+        
+        const accent = getComputedStyle(document.body).getPropertyValue('--color-accent').trim();
+        const borderColor = `rgb(${accent})`;
+        const bgColor = `rgba(${accent.split(' ').join(',')}, 0.1)`;
+
+        mainChart = new Chart(canvas.getContext('2d'), { 
+            type: 'line', 
+            data: { 
+                labels: (d.trend || []).map(x => x.day), 
+                datasets: [{ 
+                    label: 'Revenue', 
+                    data: (d.trend || []).map(x => x.rev), 
+                    borderColor: borderColor, 
+                    backgroundColor: bgColor, 
+                    fill: true, 
+                    tension: 0.4 
+                }] 
+            }, 
+            options: { 
+                responsive: true, 
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                    x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                }
+            } 
+        });
     } catch (e) { console.error("Analytics error", e); }
 }
 
@@ -479,7 +513,14 @@ async function saveRecipe() {
     closeModal('recipeModal'); refreshAll();
 }
 
-function toggleTheme() { document.body.classList.toggle('light-mode'); }
+function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('traceTheme', theme);
+    // Re-render to update dynamic elements like charts
+    if (!document.getElementById('analytics-page').classList.contains('hidden')) {
+        renderPerformance();
+    }
+}
 
 // Restock Logic
 function openRestockModal(id) {
