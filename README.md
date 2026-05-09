@@ -23,13 +23,19 @@ Trace Pro is a high-performance business management system designed to replicate
 - **Comprehensive CRUD**: Manage Ingredients, Menu Items, and Categories through a unified interface.
 - **Relational Organization**: Dual-category system for Inventory (Back of House) and Menu (Front of House).
 
+### 5. Vendor Management
+- **Third-Party Consignment**: Track which products are sourced from external vendors versus produced in-house.
+- **Vendor Tracking**: Assign and manage third-party suppliers directly in the Back Office Menu Setup.
+
 ---
 
 ## 🛠️ System Architecture
 
 ### Database Schema (`trace_db`)
+- `inventory_categories` & `menu_categories`: Granular categorization logic.
 - `inventory_items`: Raw ingredients with cost and stock tracking.
-- `menu_items`: Product listings.
+- `vendors`: Third-party suppliers for consignment or pre-packaged goods.
+- `menu_items`: Product listings mapped to categories and vendors.
 - `menu_variants`: Specific sizes/versions of products with distinct pricing.
 - `menu_recipes`: Relational map linking variants to specific ingredient quantities.
 - `orders` & `order_items`: Transactional ledger.
@@ -53,8 +59,11 @@ Trace Pro is a high-performance business management system designed to replicate
 2. **Initialize Database**:
    - Open your browser and navigate to `http://localhost/trace/setup.php`.
    - Click **Init** to create all relational tables.
-   - Click **Seed** to load the professional Loyverse-style dataset (Coffee, Bakery, etc.).
-3. **Launch Terminal**:
+3. **Seeding Data**:
+   - Run `php seed_ingredients.php` to load custom inventory items.
+   - Run `php seed_menu.php` to load menu setups and their ingredient recipes.
+   - Run `php seed_categories.php` to auto-categorize inventory.
+4. **Launch Terminal**:
    - Navigate to `http://localhost/trace/index.html` to start using the system.
 
 ---

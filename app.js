@@ -1,6 +1,6 @@
 // State
 let menu = []; let inventory = []; let cart = []; 
-let invCats = []; let menuCats = [];
+let invCats = []; let menuCats = []; let vendors = [];
 let currentItem = null; let mainChart = null;
 let activeBackOfficeTab = 'ingredients';
 
@@ -17,17 +17,19 @@ async function refreshAll() {
             return j;
         };
 
-        const [m, inv, ic, mc] = await Promise.all([
+        const [m, inv, ic, mc, v] = await Promise.all([
             fetchJSON('api.php?action=get_menu'),
             fetchJSON('api.php?action=get_inventory'),
             fetchJSON('api.php?action=get_inventory_categories'),
-            fetchJSON('api.php?action=get_menu_categories')
+            fetchJSON('api.php?action=get_menu_categories'),
+            fetchJSON('api.php?action=get_vendors')
         ]);
 
         menu = Array.isArray(m) ? m : [];
         inventory = Array.isArray(inv) ? inv : [];
         invCats = Array.isArray(ic) ? ic : [];
         menuCats = Array.isArray(mc) ? mc : [];
+        vendors = Array.isArray(v) ? v : [];
 
         renderAll();
     } catch (e) {
@@ -69,6 +71,7 @@ async function renderBackOffice() {
         const logTable = document.getElementById('bo-logs-table');
         const invCatList = document.getElementById('bo-inv-cats');
         const menuCatList = document.getElementById('bo-menu-cats');
+        const vendorsTable = document.getElementById('bo-vendors-table');
 
         if (activeBackOfficeTab === 'ingredients' && invTable) {
             invTable.innerHTML = inventory.map(item => {
@@ -89,12 +92,13 @@ async function renderBackOffice() {
         else if (activeBackOfficeTab === 'menu' && menuTable) {
             menuTable.innerHTML = menu.map(item => `<tr class="hover:bg-white/5 transition-colors">
                 <td class="px-8 py-5 font-bold text-slate-100">${item.name}</td>
-                <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase">${item.category_name || 'General'}</td>
-                <td class="px-8 py-5"><div class="space-y-2">${(item.variants || []).map(v => `<div class="flex justify-between items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-[10px] font-black uppercase text-slate-500">${v.name}</span><span class="text-slate-100 font-mono text-[10px]">$${parseFloat(v.price).toFixed(2)}</span></div>`).join('')}</div></td>
-                <td class="px-8 py-5 text-right space-x-2">
-                    <button onclick="editMenuItem(${item.id})" class="text-accent p-2" title="Edit Product"><i class="fas fa-edit"></i></button>
-                    <button onclick="editRecipe(${item.id})" class="text-sky-400 p-2" title="Recipe Builder"><i class="fas fa-mortar-pestle"></i></button>
-                    <button onclick="deleteMenuItem(${item.id})" class="text-red-500 p-2" title="Delete Product"><i class="fas fa-trash"></i></button>
+                <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase whitespace-nowrap">${item.category_name || 'General'}</td>
+                <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase whitespace-nowrap">${item.vendor_name || 'In-House'}</td>
+                <td class="px-8 py-5 w-1/3"><div class="space-y-2">${(item.variants || []).map(v => `<div class="flex justify-between items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-[10px] font-black uppercase text-slate-500">${v.name}</span><span class="text-slate-100 font-mono text-[10px]">$${parseFloat(v.price).toFixed(2)}</span></div>`).join('')}</div></td>
+                <td class="px-8 py-5 text-right whitespace-nowrap space-x-2">
+                    <button onclick="editMenuItem(${item.id})" class="text-accent p-2 hover:scale-110 transition-transform" title="Edit Product"><i class="fas fa-edit"></i></button>
+                    <button onclick="editRecipe(${item.id})" class="text-sky-400 p-2 hover:scale-110 transition-transform" title="Recipe Builder"><i class="fas fa-mortar-pestle"></i></button>
+                    <button onclick="deleteMenuItem(${item.id})" class="text-red-500 p-2 hover:scale-110 transition-transform" title="Delete Product"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`).join('');
         }
@@ -143,6 +147,14 @@ async function renderBackOffice() {
             invCatList.innerHTML = invCats.map(c => `<div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center text-xs font-bold"><span>${c.name}</span><i class="fas fa-layer-group text-sky-400 opacity-30"></i></div>`).join('');
             menuCatList.innerHTML = menuCats.map(c => `<div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center text-xs font-bold"><span>${c.name}</span><i class="fas fa-tag text-emerald-400 opacity-30"></i></div>`).join('');
         }
+
+        else if (activeBackOfficeTab === 'vendors' && vendorsTable) {
+            vendorsTable.innerHTML = vendors.map(v => `<tr class="hover:bg-white/5 transition-colors">
+                <td class="px-8 py-5 font-bold text-slate-100">${v.name}</td>
+                <td class="px-8 py-5 text-xs text-slate-400">${v.contact_info || 'N/A'}</td>
+                <td class="px-8 py-5 text-xs text-slate-500 font-mono">${new Date(v.created_at).toLocaleDateString()}</td>
+            </tr>`).join('');
+        }
     } catch (err) { console.error("BO Render error", err); }
 }
 
@@ -169,7 +181,7 @@ function switchBackOffice(tab) {
     const targetTab = document.getElementById(`tab-${tab}`);
     if (targetTab) targetTab.classList.add('active-tab');
     
-    ['ingredients', 'menu', 'analysis', 'logs', 'categories'].forEach(t => {
+    ['ingredients', 'menu', 'analysis', 'logs', 'categories', 'vendors'].forEach(t => {
         const el = document.getElementById(`bo-${t}`);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
@@ -195,9 +207,14 @@ if (addBtn) {
             document.getElementById('variant-rows').innerHTML = '';
             const catSelect = document.getElementById('prod-category');
             if (catSelect) catSelect.innerHTML = menuCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            const vendorSelect = document.getElementById('prod-vendor');
+            if (vendorSelect) vendorSelect.innerHTML = `<option value="">In-House</option>` + vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
             addVariantRow();
             openModal('productModal');
-        } else { alert('Please switch to Ingredients or Menu Setup tab first.'); }
+        } else if (activeBackOfficeTab === 'vendors') {
+            document.getElementById('vendorForm').reset();
+            openModal('vendorModal');
+        } else { alert('Please switch to Ingredients, Menu Setup, or Vendors tab first.'); }
     };
 }
 
@@ -216,6 +233,8 @@ async function editMenuItem(id) {
     document.getElementById('prod-name').value = item.name;
     const catSelect = document.getElementById('prod-category');
     if (catSelect) catSelect.innerHTML = menuCats.map(c => `<option value="${c.id}" ${c.id == item.category_id ? 'selected' : ''}>${c.name}</option>`).join('');
+    const vendorSelect = document.getElementById('prod-vendor');
+    if (vendorSelect) vendorSelect.innerHTML = `<option value="">In-House</option>` + vendors.map(v => `<option value="${v.id}" ${v.id == item.vendor_id ? 'selected' : ''}>${v.name}</option>`).join('');
     
     const varContainer = document.getElementById('variant-rows');
     varContainer.innerHTML = '';
@@ -248,7 +267,8 @@ if (productForm) {
             const price = row.querySelector('.var-price').value;
             if (name && price) variants.push({ name, price });
         });
-        const data = { id, name: document.getElementById('prod-name').value, category_id: document.getElementById('prod-category').value, variants };
+        const vendor_id = document.getElementById('prod-vendor') ? document.getElementById('prod-vendor').value : '';
+        const data = { id, name: document.getElementById('prod-name').value, category_id: document.getElementById('prod-category').value, vendor_id, variants };
         await fetch(`api.php?action=${id ? 'update_menu_item' : 'add_menu_item'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         closeModal('productModal'); refreshAll();
     };
@@ -256,6 +276,17 @@ if (productForm) {
 
 function openModal(id) { const el = document.getElementById(id); if (el) { el.classList.remove('hidden'); el.classList.add('flex'); } }
 function closeModal(id) { const el = document.getElementById(id); if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } }
+
+// Vendor Logic
+const vendorForm = document.getElementById('vendorForm');
+if (vendorForm) {
+    vendorForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const data = { name: document.getElementById('vendor-name').value, contact_info: document.getElementById('vendor-contact').value };
+        await fetch(`api.php?action=add_vendor`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        closeModal('vendorModal'); refreshAll();
+    };
+}
 
 // POS Logic
 function handleItemClick(itemId) {

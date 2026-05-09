@@ -58,6 +58,7 @@
                     <button onclick="switchBackOffice('analysis')" id="tab-analysis" class="backoffice-tab pb-2">Menu Analysis</button>
                     <button onclick="switchBackOffice('logs')" id="tab-logs" class="backoffice-tab pb-2">Stock Logs</button>
                     <button onclick="switchBackOffice('categories')" id="tab-categories" class="backoffice-tab pb-2">Categories</button>
+                    <button onclick="switchBackOffice('vendors')" id="tab-vendors" class="backoffice-tab pb-2">Vendors</button>
                 </div>
             </div>
             <button id="add-btn" class="bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
@@ -73,7 +74,7 @@
         <!-- Sub-Page: Menu CRUD -->
         <div id="bo-menu" class="hidden space-y-4">
             <div class="glass rounded-3xl overflow-hidden">
-                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Product Name</th><th class="px-8 py-5">Category</th><th class="px-8 py-5">Variants</th><th class="px-8 py-5 text-right">Actions</th></tr></thead><tbody id="bo-menu-table" class="divide-y divide-white/5"></tbody></table>
+                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5 whitespace-nowrap">Product Name</th><th class="px-8 py-5 whitespace-nowrap">Category</th><th class="px-8 py-5 whitespace-nowrap">Vendor</th><th class="px-8 py-5 w-1/3">Variants</th><th class="px-8 py-5 text-right whitespace-nowrap">Actions</th></tr></thead><tbody id="bo-menu-table" class="divide-y divide-white/5"></tbody></table>
             </div>
         </div>
 
@@ -116,6 +117,13 @@
             <div class="glass p-8 rounded-3xl">
                 <h3 class="font-bold mb-6 text-emerald-400 uppercase text-[10px] tracking-widest">Menu Categories</h3>
                 <div id="bo-menu-cats" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Sub-Page: Vendors CRUD -->
+        <div id="bo-vendors" class="hidden space-y-4">
+            <div class="glass rounded-3xl overflow-hidden">
+                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Vendor Name</th><th class="px-8 py-5">Contact Info</th><th class="px-8 py-5">Added On</th></tr></thead><tbody id="bo-vendors-table" class="divide-y divide-white/5"></tbody></table>
             </div>
         </div>
     </main>
@@ -164,9 +172,10 @@
             <h2 class="text-2xl font-black mb-8">Manage Product</h2>
             <form id="productForm" class="space-y-6 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <input type="hidden" id="prod-id">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Product Name</label><input type="text" id="prod-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
                     <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Category</label><select id="prod-category" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></select></div>
+                    <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Vendor</label><select id="prod-vendor" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"><option value="">In-House</option></select></div>
                 </div>
                 
                 <div class="space-y-4">
@@ -221,6 +230,21 @@
                 <button onclick="closeModal('recipeModal')" class="flex-1 text-slate-500 text-xs font-black uppercase">Cancel</button>
                 <button onclick="saveRecipe()" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl">Update Recipe</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Vendor Modal -->
+    <div id="vendorModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-md rounded-[40px] p-10">
+            <h2 class="text-2xl font-black mb-8">Add Vendor</h2>
+            <form id="vendorForm" class="space-y-6">
+                <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Vendor Name</label><input type="text" id="vendor-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
+                <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Contact Info</label><input type="text" id="vendor-contact" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="closeModal('vendorModal')" class="flex-1 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl">Save Vendor</button>
+                </div>
+            </form>
         </div>
     </div>
 

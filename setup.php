@@ -16,6 +16,12 @@ if ($action) {
         $conn->select_db($dbName);
 
         $tables = [
+            "vendors" => "CREATE TABLE IF NOT EXISTS vendors (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                contact_info VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
             "inventory_categories" => "CREATE TABLE IF NOT EXISTS inventory_categories (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(100) NOT NULL UNIQUE
@@ -37,10 +43,12 @@ if ($action) {
             "menu_items" => "CREATE TABLE IF NOT EXISTS menu_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 category_id INT,
+                vendor_id INT DEFAULT NULL,
                 name VARCHAR(255) NOT NULL,
                 image_url VARCHAR(255),
                 is_active BOOLEAN DEFAULT TRUE,
-                FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE SET NULL
+                FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
+                FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL
             )",
             "menu_variants" => "CREATE TABLE IF NOT EXISTS menu_variants (
                 id INT AUTO_INCREMENT PRIMARY KEY,

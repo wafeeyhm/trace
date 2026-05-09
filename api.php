@@ -10,6 +10,19 @@ $action = $_GET['action'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($action) {
+    // --- Vendors ---
+    case 'get_vendors':
+        echo json_encode($pdo->query("SELECT * FROM vendors ORDER BY name ASC")->fetchAll());
+        break;
+    case 'add_vendor':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO vendors (name, contact_info) VALUES (?, ?)");
+            $stmt->execute([$data['name'], $data['contact_info'] ?? null]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+        }
+        break;
+
     // --- Categories ---
     case 'get_inventory_categories':
         echo json_encode($pdo->query("SELECT * FROM inventory_categories ORDER BY name ASC")->fetchAll());
@@ -82,7 +95,7 @@ switch ($action) {
 
     // --- Menu Management ---
     case 'get_menu':
-        $items = $pdo->query("SELECT m.*, c.name as category_name FROM menu_items m LEFT JOIN menu_categories c ON m.category_id = c.id WHERE m.is_active = 1")->fetchAll();
+        $items = $pdo->query("SELECT m.*, c.name as category_name, v.name as vendor_name FROM menu_items m LEFT JOIN menu_categories c ON m.category_id = c.id LEFT JOIN vendors v ON m.vendor_id = v.id WHERE m.is_active = 1")->fetchAll();
         foreach ($items as &$item) {
             $stmt = $pdo->prepare("
                 SELECT v.*, 
@@ -101,8 +114,9 @@ switch ($action) {
     case 'add_menu_item':
         if ($method === 'POST') {
             $data = json_decode(file_get_contents('php://input'), true);
-            $stmt = $pdo->prepare("INSERT INTO menu_items (category_id, name) VALUES (?, ?)");
-            $stmt->execute([$data['category_id'], $data['name']]);
+            $vendorId = !empty($data['vendor_id']) ? $data['vendor_id'] : null;
+            $stmt = $pdo->prepare("INSERT INTO menu_items (category_id, vendor_id, name) VALUES (?, ?, ?)");
+            $stmt->execute([$data['category_id'], $vendorId, $data['name']]);
             echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
         }
         break;
@@ -110,10 +124,11 @@ switch ($action) {
     case 'update_menu_item':
         if ($method === 'POST') {
             $data = json_decode(file_get_contents('php://input'), true);
+            $vendorId = !empty($data['vendor_id']) ? $data['vendor_id'] : null;
             $pdo->beginTransaction();
             try {
-                $stmt = $pdo->prepare("UPDATE menu_items SET category_id = ?, name = ? WHERE id = ?");
-                $stmt->execute([$data['category_id'], $data['name'], $data['id']]);
+                $stmt = $pdo->prepare("UPDATE menu_items SET category_id = ?, vendor_id = ?, name = ? WHERE id = ?");
+                $stmt->execute([$data['category_id'], $vendorId, $data['name'], $data['id']]);
                 
                 // For simplicity in this demo, we clear and re-add variants if provided
                 if (isset($data['variants'])) {
