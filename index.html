@@ -174,11 +174,17 @@
         <!-- Sub-Page: Categories CRUD -->
         <div id="bo-categories" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="glass p-8 rounded-3xl">
-                <h3 class="font-bold mb-6 text-sky-400 uppercase text-[10px] tracking-widest">Inventory Categories</h3>
+                <h3 class="font-bold mb-6 text-sky-400 uppercase text-[10px] tracking-widest flex justify-between items-center">
+                    <span>Inventory Categories</span>
+                    <button onclick="openCatModal('inv')" class="p-2 hover:bg-white/5 rounded-lg transition-all text-sky-400"><i class="fas fa-plus"></i></button>
+                </h3>
                 <div id="bo-inv-cats" class="space-y-2"></div>
             </div>
             <div class="glass p-8 rounded-3xl">
-                <h3 class="font-bold mb-6 text-emerald-400 uppercase text-[10px] tracking-widest">Menu Categories</h3>
+                <h3 class="font-bold mb-6 text-emerald-400 uppercase text-[10px] tracking-widest flex justify-between items-center">
+                    <span>Menu Categories</span>
+                    <button onclick="openCatModal('menu')" class="p-2 hover:bg-white/5 rounded-lg transition-all text-emerald-400"><i class="fas fa-plus"></i></button>
+                </h3>
                 <div id="bo-menu-cats" class="space-y-2"></div>
             </div>
         </div>
@@ -200,6 +206,7 @@
                     <button onclick="switchPerformance('sales')" id="tab-perf-sales" class="perf-tab active-tab pb-2">Sales Reports</button>
                     <button onclick="switchPerformance('taxes')" id="tab-perf-taxes" class="perf-tab pb-2">Tax Management</button>
                     <button onclick="switchPerformance('expenses')" id="tab-perf-expenses" class="perf-tab pb-2">Expense Tracking</button>
+                    <button onclick="switchPerformance('forecast')" id="tab-perf-forecast" class="perf-tab pb-2">Profit Forecast</button>
                 </div>
             </div>
             <button id="add-perf-btn" class="hidden bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
@@ -232,6 +239,65 @@
         <div id="perf-expenses" class="hidden space-y-4">
             <div class="glass rounded-3xl overflow-hidden">
                 <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Date</th><th class="px-8 py-5">Description</th><th class="px-8 py-5">Amount</th><th class="px-8 py-5 text-right">Actions</th></tr></thead><tbody id="perf-expenses-table" class="divide-y divide-white/5"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Sub-Page: Profit Forecast -->
+        <div id="perf-forecast" class="hidden space-y-8">
+            <div class="glass p-12 rounded-[40px] space-y-12">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-black mb-2">Profit & Inventory Projection</h2>
+                        <p class="text-sm text-slate-500 font-bold uppercase tracking-widest">Adjust volume to see expected returns based on last 30d product mix</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase mb-3">Target Sales Volume</p>
+                        <div class="flex items-center gap-6">
+                            <input type="range" id="forecast-volume" min="100" max="10000" step="100" value="1000" class="w-64 accent-accent" oninput="updateForecast()">
+                            <span id="forecast-volume-val" class="text-3xl font-black text-accent w-20">1000</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="p-8 rounded-3xl bg-white/5 border border-white/10">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Projected Revenue</p>
+                        <h3 id="for-rev" class="text-4xl font-black text-white">$0.00</h3>
+                    </div>
+                    <div class="p-8 rounded-3xl bg-white/5 border border-white/10">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Projected COGS (Cost)</p>
+                        <h3 id="for-cogs" class="text-4xl font-black text-red-400">$0.00</h3>
+                    </div>
+                    <div class="p-8 rounded-3xl bg-white/5 border border-accent/30">
+                        <p class="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Projected Profit</p>
+                        <h3 id="for-profit" class="text-4xl font-black text-accent">$0.00</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div class="space-y-6">
+                        <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center"><i class="fas fa-boxes mr-2 text-accent"></i> Inventory Requirements</h4>
+                        <div class="glass rounded-3xl overflow-hidden border border-white/5">
+                            <table class="w-full text-left">
+                                <thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-500">
+                                    <tr><th class="px-8 py-5">Ingredient</th><th class="px-8 py-5">Required</th><th class="px-8 py-5 text-right">Est. Cost</th></tr>
+                                </thead>
+                                <tbody id="for-ingredients-table" class="divide-y divide-white/5"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center"><i class="fas fa-chart-pie mr-2 text-emerald-400"></i> Forecasted Product Mix</h4>
+                        <div class="glass rounded-3xl overflow-hidden border border-white/5">
+                            <table class="w-full text-left">
+                                <thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-500">
+                                    <tr><th class="px-8 py-5">Product (Variant)</th><th class="px-8 py-5">Quantity</th><th class="px-8 py-5 text-right">Profit</th></tr>
+                                </thead>
+                                <tbody id="for-products-table" class="divide-y divide-white/5"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -412,6 +478,22 @@
         </div>
     </div>
 
-    <script src="app.js?v=4"></script>
+    <!-- Category Modal -->
+    <div id="categoryModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-md rounded-[40px] p-10">
+            <h2 id="cat-modal-title" class="text-2xl font-black mb-8">Manage Category</h2>
+            <form id="categoryForm" class="space-y-6">
+                <input type="hidden" id="cat-id">
+                <input type="hidden" id="cat-type">
+                <div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Name</label><input type="text" id="cat-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:ring-2 focus:ring-accent"></div>
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="closeModal('categoryModal')" class="flex-1 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black shadow-xl">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js?v=6"></script>
 </body>
 </html>

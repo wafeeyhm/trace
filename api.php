@@ -35,6 +35,18 @@ switch ($action) {
             echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
         }
         break;
+    case 'update_inventory_category':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("UPDATE inventory_categories SET name = ? WHERE id = ?");
+            $stmt->execute([$data['name'], $data['id']]);
+            echo json_encode(['success' => true]);
+        }
+        break;
+    case 'delete_inventory_category':
+        $pdo->prepare("DELETE FROM inventory_categories WHERE id = ?")->execute([$_GET['id']]);
+        echo json_encode(['success' => true]);
+        break;
 
     case 'get_menu_categories':
         echo json_encode($pdo->query("SELECT * FROM menu_categories ORDER BY name ASC")->fetchAll());
@@ -46,6 +58,18 @@ switch ($action) {
             $stmt->execute([$data['name']]);
             echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
         }
+        break;
+    case 'update_menu_category':
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("UPDATE menu_categories SET name = ? WHERE id = ?");
+            $stmt->execute([$data['name'], $data['id']]);
+            echo json_encode(['success' => true]);
+        }
+        break;
+    case 'delete_menu_category':
+        $pdo->prepare("DELETE FROM menu_categories WHERE id = ?")->execute([$_GET['id']]);
+        echo json_encode(['success' => true]);
         break;
 
     // --- Inventory / Ingredients ---
@@ -115,6 +139,12 @@ switch ($action) {
             ");
             $stmt->execute([$item['id']]);
             $item['variants'] = $stmt->fetchAll();
+            
+            foreach ($item['variants'] as &$v) {
+                $rStmt = $pdo->prepare("SELECT r.*, i.name as ingredient_name, i.unit FROM menu_recipes r JOIN inventory_items i ON r.inventory_item_id = i.id WHERE r.menu_variant_id = ?");
+                $rStmt->execute([$v['id']]);
+                $v['recipes'] = $rStmt->fetchAll();
+            }
         }
         echo json_encode($items);
         break;
@@ -204,6 +234,7 @@ switch ($action) {
         $expenses = $pdo->query("SELECT SUM(amount) as val FROM expenses WHERE 1=1 $expense_filter")->fetch()['val'] ?? 0;
         
         $popularity = $pdo->query("SELECT m.name, SUM(oi.quantity) as total FROM order_items oi JOIN menu_variants mv ON oi.menu_variant_id = mv.id JOIN menu_items m ON mv.menu_item_id = m.id WHERE oi.order_id IN (SELECT id FROM orders WHERE 1=1 $filter) GROUP BY m.id ORDER BY total DESC")->fetchAll();
+        $variant_popularity = $pdo->query("SELECT mv.id as variant_id, m.name as item_name, mv.name as variant_name, SUM(oi.quantity) as total FROM order_items oi JOIN menu_variants mv ON oi.menu_variant_id = mv.id JOIN menu_items m ON mv.menu_item_id = m.id WHERE oi.order_id IN (SELECT id FROM orders WHERE 1=1 $filter) GROUP BY mv.id")->fetchAll();
         $trend = $pdo->query("SELECT DATE(created_at) as day, SUM(total_amount) as rev FROM orders WHERE 1=1 $filter GROUP BY DATE(created_at) ORDER BY day ASC")->fetchAll();
         
         echo json_encode([
@@ -212,6 +243,7 @@ switch ($action) {
             'expenses' => (float)$expenses,
             'net_profit' => (float)($revenue - $expenses),
             'popularity' => $popularity, 
+            'variant_popularity' => $variant_popularity,
             'trend' => $trend
         ]);
         break;

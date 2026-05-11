@@ -5,6 +5,7 @@ let taxes = []; let expenses = [];
 let currentItem = null; let mainChart = null;
 let activeBackOfficeTab = 'ingredients';
 let activePerformanceTab = 'sales';
+let analyticsData = {};
 
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => { 
@@ -154,8 +155,24 @@ async function renderBackOffice() {
         }
 
         else if (activeBackOfficeTab === 'categories' && invCatList && menuCatList) {
-            invCatList.innerHTML = invCats.map(c => `<div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center text-xs font-bold"><span>${c.name}</span><i class="fas fa-layer-group text-sky-400 opacity-30"></i></div>`).join('');
-            menuCatList.innerHTML = menuCats.map(c => `<div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center text-xs font-bold"><span>${c.name}</span><i class="fas fa-tag text-emerald-400 opacity-30"></i></div>`).join('');
+            invCatList.innerHTML = invCats.map(c => `
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center text-xs font-bold group">
+                    <span>${c.name}</span>
+                    <div class="flex items-center gap-4">
+                        <button onclick="openCatModal('inv', ${c.id})" class="text-slate-500 hover:text-sky-400 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteCategory('inv', ${c.id})" class="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-trash"></i></button>
+                        <i class="fas fa-layer-group text-sky-400 opacity-30"></i>
+                    </div>
+                </div>`).join('');
+            menuCatList.innerHTML = menuCats.map(c => `
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center text-xs font-bold group">
+                    <span>${c.name}</span>
+                    <div class="flex items-center gap-4">
+                        <button onclick="openCatModal('menu', ${c.id})" class="text-slate-500 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteCategory('menu', ${c.id})" class="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-trash"></i></button>
+                        <i class="fas fa-tag text-emerald-400 opacity-30"></i>
+                    </div>
+                </div>`).join('');
         }
 
         else if (activeBackOfficeTab === 'vendors' && vendorsTable) {
@@ -208,19 +225,23 @@ function switchPerformance(tab) {
     const targetTab = document.getElementById(`tab-perf-${tab}`);
     if (targetTab) targetTab.classList.add('active-tab');
     
-    ['sales', 'taxes', 'expenses'].forEach(t => {
+    ['sales', 'taxes', 'expenses', 'forecast'].forEach(t => {
         const el = document.getElementById(`perf-${t}`);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
     
     const addBtn = document.getElementById('add-perf-btn');
-    if (addBtn) addBtn.classList.toggle('hidden', tab === 'sales');
+    if (addBtn) addBtn.classList.toggle('hidden', tab === 'sales' || tab === 'forecast');
     
     renderPerformance();
 }
 
 function renderPerformance() {
-    if (activePerformanceTab === 'taxes') {
+    if (activePerformanceTab === 'sales') {
+        loadAnalytics('month');
+    } else if (activePerformanceTab === 'forecast') {
+        loadAnalytics('month').then(() => updateForecast());
+    } else if (activePerformanceTab === 'taxes') {
         const tBody = document.getElementById('perf-taxes-table');
         if (tBody) {
             tBody.innerHTML = taxes.map(t => `<tr class="hover:bg-white/5 transition-colors">
@@ -430,6 +451,7 @@ async function loadAnalytics(range) {
 async function updateAnalytics(range) {
     try {
         const d = await fetch(`api.php?action=get_analytics&range=${range}`).then(r => r.json());
+        analyticsData = d;
         const revEl = document.getElementById('ana-rev');
         const taxEl = document.getElementById('ana-tax');
         const expensesEl = document.getElementById('ana-expenses');
@@ -473,6 +495,105 @@ async function updateAnalytics(range) {
     } catch (e) { console.error("Analytics error", e); }
 }
 
+function updateForecast() {
+    const volume = parseInt(document.getElementById('forecast-volume').value);
+    document.getElementById('forecast-volume-val').textContent = volume;
+
+    if (!analyticsData.variant_popularity || analyticsData.variant_popularity.length === 0) {
+        // Fallback: If no sales history, assume equal split across all menu items
+        const allVariants = [];
+        menu.forEach(item => {
+            (item.variants || []).forEach(v => {
+                allVariants.push({ ...v, item_name: item.name });
+            });
+        });
+        
+        if (allVariants.length === 0) return;
+        
+        const qtyPerItem = volume / allVariants.length;
+        renderForecastResults(allVariants.map(v => ({
+            variant_id: v.id,
+            item_name: v.item_name,
+            variant_name: v.name,
+            total: qtyPerItem,
+            price: v.price,
+            cogs: v.cogs,
+            recipes: v.recipes
+        })));
+    } else {
+        // Use historical mix
+        const history = analyticsData.variant_popularity;
+        const totalHistoryQty = history.reduce((sum, h) => sum + parseFloat(h.total), 0);
+        
+        const projectedItems = history.map(h => {
+            const share = parseFloat(h.total) / totalHistoryQty;
+            const projectedQty = volume * share;
+            
+            // Find full variant details from menu
+            let details = null;
+            menu.forEach(m => {
+                const v = (m.variants || []).find(v => v.id == h.variant_id);
+                if (v) details = v;
+            });
+            
+            return {
+                ...h,
+                total: projectedQty,
+                price: details ? details.price : 0,
+                cogs: details ? details.cogs : 0,
+                recipes: details ? details.recipes : []
+            };
+        });
+        
+        renderForecastResults(projectedItems);
+    }
+}
+
+function renderForecastResults(items) {
+    let totalRev = 0;
+    let totalCogs = 0;
+    const ingredientNeeds = {};
+
+    items.forEach(item => {
+        const qty = item.total;
+        totalRev += qty * parseFloat(item.price);
+        totalCogs += qty * parseFloat(item.cogs);
+        
+        (item.recipes || []).forEach(r => {
+            if (!ingredientNeeds[r.inventory_item_id]) {
+                ingredientNeeds[r.inventory_item_id] = { name: r.ingredient_name, qty: 0, unit: r.unit, cost: 0 };
+            }
+            const needed = qty * parseFloat(r.quantity);
+            ingredientNeeds[r.inventory_item_id].qty += needed;
+            // Assuming cost_per_unit is needed here, we can find it from the variant cogs logic or fetch inventory
+            // But let's use the recipe quantity * item cost per unit if available
+            // For now we'll estimate cost based on variant cogs share
+        });
+    });
+
+    document.getElementById('for-rev').textContent = `$${totalRev.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    document.getElementById('for-cogs').textContent = `$${totalCogs.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    document.getElementById('for-profit').textContent = `$${(totalRev - totalCogs).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+    const ingTable = document.getElementById('for-ingredients-table');
+    ingTable.innerHTML = Object.values(ingredientNeeds).map(i => `
+        <tr class="hover:bg-white/5 transition-colors">
+            <td class="px-8 py-5 font-bold text-slate-100">${i.name}</td>
+            <td class="px-8 py-5 text-xs text-accent font-black">${i.qty.toFixed(3)} ${i.unit}</td>
+            <td class="px-8 py-5 text-right text-xs text-slate-500 font-mono">Based on recipes</td>
+        </tr>
+    `).join('');
+
+    const prodTable = document.getElementById('for-products-table');
+    prodTable.innerHTML = items.sort((a,b) => b.total - a.total).slice(0, 10).map(i => `
+        <tr class="hover:bg-white/5 transition-colors">
+            <td class="px-8 py-5 text-xs font-bold text-slate-100">${i.item_name} <span class="text-slate-500 font-normal ml-2">${i.variant_name}</span></td>
+            <td class="px-8 py-5 text-xs text-slate-400 font-black">${Math.round(i.total)} units</td>
+            <td class="px-8 py-5 text-right text-xs text-emerald-400 font-black">$${(i.total * (parseFloat(i.price) - parseFloat(i.cogs))).toFixed(2)}</td>
+        </tr>
+    `).join('');
+}
+
 // Recipe Builder
 let activeVariantId = null;
 async function editRecipe(itemId) {
@@ -511,6 +632,49 @@ async function saveRecipe() {
     });
     await fetch('api.php?action=save_recipe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ variant_id: activeVariantId, ingredients }) });
     closeModal('recipeModal'); refreshAll();
+}
+
+// Category Management
+function openCatModal(type, id = null) {
+    document.getElementById('cat-type').value = type;
+    document.getElementById('cat-id').value = id || '';
+    document.getElementById('cat-modal-title').textContent = (id ? 'Edit ' : 'Add ') + (type === 'inv' ? 'Inventory' : 'Menu') + ' Category';
+    
+    if (id) {
+        const list = type === 'inv' ? invCats : menuCats;
+        const cat = list.find(c => c.id == id);
+        document.getElementById('cat-name').value = cat ? cat.name : '';
+    } else {
+        document.getElementById('cat-name').value = '';
+    }
+    openModal('categoryModal');
+}
+
+async function deleteCategory(type, id) {
+    if (!confirm('Are you sure? This might affect items in this category.')) return;
+    const action = type === 'inv' ? 'delete_inventory_category' : 'delete_menu_category';
+    await fetch(`api.php?action=${action}&id=${id}`);
+    refreshAll();
+}
+
+const catForm = document.getElementById('categoryForm');
+if (catForm) {
+    catForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('cat-id').value;
+        const type = document.getElementById('cat-type').value;
+        const name = document.getElementById('cat-name').value;
+        const actionBase = type === 'inv' ? 'inventory_category' : 'menu_category';
+        const action = (id ? 'update_' : 'add_') + actionBase;
+        
+        await fetch(`api.php?action=${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, name })
+        });
+        closeModal('categoryModal');
+        refreshAll();
+    };
 }
 
 function setTheme(theme) {
