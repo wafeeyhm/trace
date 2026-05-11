@@ -1,0 +1,9 @@
+# Protect internal files
+RewriteEngine On
+RewriteRule ^src/ - [F,L]
+RewriteRule ^scripts/ - [F,L]
+
+# Redirect all requests to index.php if needed (optional)
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteRule ^(.*)$ index.php [QSA,L]

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace Pulse | POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script>
+        tailwind.config = { 
+            darkMode: 'class', 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        'slate-950': 'rgb(var(--color-bg) / <alpha-value>)', 
+                        'accent': 'rgb(var(--color-accent) / <alpha-value>)',
+                        'slate-100': 'rgb(var(--color-text) / <alpha-value>)',
+                        'white': 'rgb(var(--color-text) / <alpha-value>)',
+                        'slate-400': 'rgb(var(--color-secondary) / <alpha-value>)',
+                        'slate-500': 'rgb(var(--color-secondary) / <alpha-value>)',
+                        'red-400': 'rgb(var(--color-danger) / <alpha-value>)',
+                        'red-500': 'rgb(var(--color-danger) / <alpha-value>)',
+                        'emerald-400': 'rgb(var(--color-success) / <alpha-value>)',
+                        'emerald-500': 'rgb(var(--color-success) / <alpha-value>)',
+                        'sky-400': 'rgb(var(--color-accent) / <alpha-value>)',
+                        'sky-500': 'rgb(var(--color-accent) / <alpha-value>)'
+                    } 
+                } 
+            } 
+        }
+    </script>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50">
+        <div class="text-accent text-2xl"><i class="fas fa-bolt"></i></div>
+        <nav class="flex flex-col gap-6">
+            <a href="index.html" class="nav-btn text-accent" title="Register"><i class="fas fa-th-large text-xl"></i></a>
+            <a href="../back-office/index.html" class="nav-btn text-slate-500 hover:text-white" title="Management"><i class="fas fa-cog text-xl"></i></a>
+        </nav>
+    </aside>
+
+    <!-- Page: POS (Register) -->
+    <main id="pos-page" class="flex-1 flex flex-row h-full">
+        <div class="flex-1 flex flex-col h-full bg-slate-950/50">
+            <header class="p-8 flex justify-between items-center border-b border-white/5">
+                <h1 class="text-2xl font-black">Trace Pulse</h1>
+                <div class="relative w-96"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" placeholder="Search menu..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent transition-all"></div>
+            </header>
+            <div id="product-grid" class="flex-1 p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto hide-scrollbar"></div>
+        </div>
+        <aside class="w-[400px] glass flex flex-col h-full border-l border-white/5">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5"><h2 class="font-black uppercase text-xs tracking-[0.2em]">Ticket</h2><button onclick="clearCart()" class="text-[10px] font-bold text-red-400 hover:text-red-300">Clear</button></div>
+            <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+            <div class="p-8 bg-white/5 border-t border-white/10 space-y-4">
+                <div class="flex justify-between text-2xl font-black pt-4 border-t border-white/5"><span>Total</span><span id="cart-total" class="text-accent">$0.00</span></div>
+                <button onclick="openPayment()" class="w-full bg-accent text-slate-950 py-5 rounded-2xl font-black shadow-xl hover:scale-[1.02] active:scale-95 transition-all mt-4">CHARGE</button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modals -->
+    <div id="variantModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6"><div class="glass w-full max-w-md rounded-[40px] p-10 text-center"><h2 id="var-item-name" class="text-2xl font-black mb-6">Choose Size</h2><div id="variant-list" class="space-y-3"></div><button onclick="closeModal('variantModal')" class="mt-8 text-slate-500 text-xs font-bold uppercase">Cancel</button></div></div>
+    
+    <div id="receiptModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[200] hidden items-center justify-center p-6"><div class="bg-white text-slate-950 w-full max-w-xs p-8 rounded-sm shadow-2xl font-mono text-[10px] space-y-4"><div class="text-center border-b border-dashed border-slate-300 pb-4"><h2 class="text-lg font-bold">TRACE PRO</h2><p id="rec-date"></p></div><div id="rec-items" class="space-y-1"></div><div class="border-t border-dashed border-slate-300 pt-4"><div class="flex justify-between font-bold text-sm"><span>TOTAL</span><span id="rec-total"></span></div></div><button onclick="closeModal('receiptModal')" class="w-full bg-slate-950 text-white py-3 rounded-md font-bold mt-4">DONE</button></div></div>
+
+    <script src="assets/js/theme.js"></script>
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/pos.js"></script>
+</body>
+</html>
