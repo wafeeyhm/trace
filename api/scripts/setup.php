@@ -1,8 +1,9 @@
 <?php
-$host = 'localhost';
-$user = 'root';
-$pass = '';
-$dbName = 'trace_db';
+$config = require __DIR__ . '/../src/Config/env.php';
+$host = $config['DB_HOST'];
+$user = $config['DB_USER'];
+$pass = $config['DB_PASS'];
+$dbName = $config['DB_NAME'];
 
 $action = $_GET['action'] ?? '';
 $results = [];
@@ -90,6 +91,19 @@ if ($action) {
                 reason VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE CASCADE
+            )",
+            "expenses" => "CREATE TABLE IF NOT EXISTS expenses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                description VARCHAR(255) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                expense_date DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            "taxes" => "CREATE TABLE IF NOT EXISTS taxes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                rate DECIMAL(5, 2) NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE
             )"
         ];
 
@@ -143,7 +157,7 @@ if ($action) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>Trace Pro | Back Office</title>
+    <meta charset="UTF-8"><title>Trace Pro | Setup</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -175,7 +189,7 @@ if ($action) {
             <a href="?action=reset" onclick="return confirm('Nuke DB?')" class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-red-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest group">
                 <i class="fas fa-radiation block text-2xl mb-2 text-red-500 group-hover:text-white"></i>Nuke</a>
         </div>
-        <a href="index.html" class="block w-full bg-white text-slate-950 py-4 rounded-xl font-black hover:scale-[1.02] transition-transform">Launch POS Terminal</a>
+        <a href="../../pos/index.html" class="block w-full bg-white text-slate-950 py-4 rounded-xl font-black hover:scale-[1.02] transition-transform">Launch POS Terminal</a>
     </div>
 </body>
 </html>

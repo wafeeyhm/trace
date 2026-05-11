@@ -4,47 +4,35 @@ Trace Pro is a high-performance business management system designed to replicate
 
 ## 🚀 Key Features
 
-### 1. Point-of-Sale (POS) Terminal
+### 1. Trace Pulse (POS Terminal)
 - **Digital Ticket System**: Real-time cart management with multi-item support.
 - **Variant Engine**: Supports products with multiple sizes/prices (e.g., Small, Large).
 - **Instant Receipts**: Digital receipt generation with order history tracking.
 
-### 2. Automated Inventory Control
-- **Recipe-Driven Deduction**: Every sale triggers an automatic deduction of raw ingredients based on pre-defined recipes.
-- **Stock Audit Trail**: Comprehensive logs for every movement (Sale, Restock, Waste).
-- **Low Stock Alerts**: Visual badges and indicators for items below safety thresholds.
+### 2. Trace Lens (Back Office Suite)
+- **Automated Inventory Control**: Recipe-driven deduction and stock audit trails.
+- **Financial Business Intelligence (BI)**: COGS tracking, margin analysis, and revenue trends.
+- **Comprehensive Management**: Unified interface for Ingredients, Menu Setup, and Vendors.
 
-### 3. Financial Business Intelligence (BI)
-- **COGS Tracking**: Automatic calculation of Cost of Goods Sold for every menu item.
-- **Profit Margin Analysis**: Real-time monitoring of Gross Profit and Margin % per item and variant.
-- **Revenue Analytics**: Daily, Monthly, and Yearly revenue trends via interactive charts.
-
-### 4. Back Office Suite
-- **Comprehensive CRUD**: Manage Ingredients, Menu Items, and Categories through a unified interface.
-- **Relational Organization**: Dual-category system for Inventory (Back of House) and Menu (Front of House).
-
-### 5. Vendor Management
-- **Third-Party Consignment**: Track which products are sourced from external vendors versus produced in-house.
-- **Vendor Tracking**: Assign and manage third-party suppliers directly in the Back Office Menu Setup.
+### 3. Modular Architecture
+- **Separated Systems**: Pulse and Lens operate as independent client applications.
+- **Unified API**: A centralized MVC-based API handles all data orchestration.
+- **Shared Aesthetics**: Consistent dark-mode premium design across all interfaces.
 
 ---
 
 ## 🛠️ System Architecture
 
-### Database Schema (`trace_db`)
-- `inventory_categories` & `menu_categories`: Granular categorization logic.
-- `inventory_items`: Raw ingredients with cost and stock tracking.
-- `vendors`: Third-party suppliers for consignment or pre-packaged goods.
-- `menu_items`: Product listings mapped to categories and vendors.
-- `menu_variants`: Specific sizes/versions of products with distinct pricing.
-- `menu_recipes`: Relational map linking variants to specific ingredient quantities.
-- `orders` & `order_items`: Transactional ledger.
-- `inventory_logs`: Historical audit of all stock changes.
+### MVC API (`api/src/`)
+The system follows a professional **Model-View-Controller** pattern:
+- **Models**: Business logic and data access (SQL).
+- **Controllers**: Request handling and response coordination.
+- **Core**: Routing and Database connection management.
 
-### Tech Stack
-- **Backend**: PHP 8.x with PDO (MySQL/MariaDB).
-- **Frontend**: Tailwind CSS, Chart.js, Vanilla JavaScript.
-- **Design**: Dark-mode premium aesthetic with glassmorphism effects.
+### Security
+- **Protected Logic**: Internal source code is shielded from direct public access.
+- **Credential Masking**: Sensitive database information is externalized to an environment configuration file (`env.php`).
+- **Access Control**: Utilities and setup scripts are isolated in a protected directory.
 
 ---
 
@@ -56,36 +44,31 @@ Trace Pro is a high-performance business management system designed to replicate
 
 ### Installation Steps
 1. **Clone/Copy** the project folder into your `htdocs` directory.
-2. **Initialize Database**:
-   - Open your browser and navigate to `http://localhost/trace/setup.php`.
-   - Click **Init** to create all relational tables.
-3. **Seeding Data**:
-   - Run `php seed_ingredients.php` to load custom inventory items.
-   - Run `php seed_menu.php` to load menu setups and their ingredient recipes.
-   - Run `php seed_categories.php` to auto-categorize inventory.
-4. **Launch Terminal**:
-   - Navigate to `http://localhost/trace/index.html` to start using the system.
+2. **Configure Environment**:
+   - Navigate to `api/src/Config/env.php`.
+   - Update your database credentials if they differ from the defaults.
+3. **Initialize Database**:
+   - Open your browser and navigate to `http://localhost/trace/api/scripts/setup.php`.
+   - Click **Init** to create the relational schema.
+4. **Seeding Data**:
+   - Click **Seed** in the setup console to load professional demonstration data.
+5. **Launch Terminal**:
+   - Navigate to `http://localhost/trace/` (automatically redirects to Trace Pulse).
 
 ---
 
-## 📖 Standard Workflows
+## 📖 Modern Workflows
 
-### Setting up a Recipe
-1. Enter the **Back Office** (Gear icon).
-2. Go to **Menu Setup**.
-3. Click the **Mortar & Pestle** icon for a product.
-4. Add ingredients and specify the exact quantity used (e.g., 0.018 for beans).
-5. Save the recipe. The **COGS** and **Margin %** will update instantly.
+### Client-Server Interaction
+Trace Pro uses a clean client-server model. Both **Trace Pulse** and **Trace Lens** make asynchronous requests to the Trace API, ensuring a fast and responsive user experience without page reloads.
 
-### Monitoring Performance
-1. Visit the **Menu Analysis** tab to see which products have the highest margins.
-2. Visit the **Analytics** page to track revenue growth over time.
-3. Check **Stock Logs** to verify that sales are deducting the correct amount of inventory.
+### Secure Management
+Administrative tools and database maintenance scripts are now centralized in the `api/scripts/` folder, allowing for better access control and security in production environments.
 
 ---
 
 ## 📋 Verification Plan
-1. ✅ **POS Logic**: Add items, select variants, and process a charge.
-2. ✅ **Auto-Deduction**: Verify stock levels decrease after a sale.
-3. ✅ **Financials**: Verify that COGS is calculated correctly in Menu Analysis.
-4. ✅ **Navigation**: Ensure smooth transitions between Register, Back Office, and Analytics.
+1. ✅ **MVC Logic**: Verify API actions return structured JSON through controllers.
+2. ✅ **System Separation**: Ensure local assets for Pulse and Lens load correctly.
+3. ✅ **Theme Sync**: Verify that theme settings selected in Lens persist to Pulse via shared localStorage logic.
+4. ✅ **Security**: Confirm that internal files in `api/src/` are blocked from direct browser access.

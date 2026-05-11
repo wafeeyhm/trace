@@ -1,9 +1,7 @@
-# Protect internal files
+# Protect internal source code
 RewriteEngine On
 RewriteRule ^src/ - [F,L]
-RewriteRule ^scripts/ - [F,L]
 
-# Redirect all requests to index.php if needed (optional)
-# RewriteCond %{REQUEST_FILENAME} !-f
-# RewriteCond %{REQUEST_FILENAME} !-d
-# RewriteRule ^(.*)$ index.php [QSA,L]
+# Allow scripts for now, but you may want to protect this folder 
+# with Basic Auth or IP restriction later for production.
+# RewriteRule ^scripts/ - [F,L]

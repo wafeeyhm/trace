@@ -1,8 +1,9 @@
 <?php
-$host = 'localhost';
-$user = 'root';
-$pass = '';
-$dbName = 'trace_db';
+$config = require __DIR__ . '/../src/Config/env.php';
+$host = $config['DB_HOST'];
+$user = $config['DB_USER'];
+$pass = $config['DB_PASS'];
+$dbName = $config['DB_NAME'];
 
 $conn = new mysqli($host, $user, $pass, $dbName);
 if ($conn->connect_error) {
