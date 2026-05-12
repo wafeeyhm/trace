@@ -1,5 +1,6 @@
 // Core State & Utilities
 let menu = []; let inventory = []; let invCats = []; let menuCats = []; let vendors = []; let taxes = []; let expenses = [];
+let isOnline = navigator.onLine;
 
 async function fetchJSON(url) {
     const r = await fetch(url);
@@ -36,7 +37,28 @@ async function refreshCoreData() {
     }
 }
 
-// Modal Helpers
+// --- Online/Offline Handling ---
+function handleOnline() {
+    isOnline = true;
+    const banner = document.getElementById('offline-banner');
+    if (banner) banner.classList.add('hidden');
+    // Attempt to sync any queued orders
+    if (typeof syncQueue === 'function') syncQueue();
+}
+
+function handleOffline() {
+    isOnline = false;
+    const banner = document.getElementById('offline-banner');
+    if (banner) banner.classList.remove('hidden');
+}
+
+window.addEventListener('online', handleOnline);
+window.addEventListener('offline', handleOffline);
+
+// Apply initial state
+if (!isOnline) handleOffline();
+
+// --- Modal Helpers ---
 function openModal(id) { 
     const el = document.getElementById(id); 
     if (el) { 

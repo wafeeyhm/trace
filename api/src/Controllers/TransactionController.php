@@ -24,4 +24,20 @@ class TransactionController extends BaseController {
         $range = $_GET['range'] ?? 'month';
         $this->jsonResponse($this->model->getAnalytics($range));
     }
+
+    public function pendingOrders() {
+        $this->jsonResponse($this->model->getPendingOrders());
+    }
+
+    public function updateKdsStatus() {
+        if ($this->getRequestMethod() === 'POST') {
+            try {
+                $data = $this->getPostData();
+                $this->model->updateKdsStatus($data['order_id'], $data['status']);
+                $this->jsonResponse(['success' => true]);
+            } catch (\Exception $e) {
+                $this->jsonResponse(['error' => $e->getMessage()]);
+            }
+        }
+    }
 }

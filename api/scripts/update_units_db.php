@@ -15,13 +15,19 @@ $queries = [
     "ALTER TABLE inventory_items ADD COLUMN purchase_unit VARCHAR(20) DEFAULT 'unit' AFTER name",
     "ALTER TABLE inventory_items ADD COLUMN usage_unit VARCHAR(20) DEFAULT 'unit' AFTER purchase_unit",
     "ALTER TABLE inventory_items ADD COLUMN conversion_factor DECIMAL(10, 4) DEFAULT 1.0000 AFTER usage_unit",
+    // Phase Two: KDS status on orders
+    "ALTER TABLE orders ADD COLUMN kds_status ENUM('pending', 'preparing', 'done') DEFAULT 'pending' AFTER payment_type",
 ];
 
+echo "Running migrations...\n";
+
 foreach ($queries as $sql) {
-    if ($conn->query($sql)) {
-        echo "Executed: $sql\n";
-    } else {
-        echo "Error or already exists: " . $conn->error . "\n";
+    try {
+        if ($conn->query($sql)) {
+            echo "OK: $sql\n";
+        }
+    } catch (Exception $e) {
+        echo "Skipped (already exists): " . $conn->error . "\n";
     }
 }
 

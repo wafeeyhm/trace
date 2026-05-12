@@ -35,6 +35,37 @@ class Transaction {
         }
     }
 
+    public function getPendingOrders() {
+        $orders = $this->db->query(
+            "SELECT o.id, o.kds_status, o.created_at, o.payment_type
+             FROM orders o
+             WHERE o.kds_status IN ('pending', 'preparing')
+             ORDER BY o.created_at ASC"
+        )->fetchAll();
+
+        foreach ($orders as &$order) {
+            $stmt = $this->db->prepare(
+                "SELECT oi.quantity, mv.name as variant_name, mi.name as item_name
+                 FROM order_items oi
+                 JOIN menu_variants mv ON oi.menu_variant_id = mv.id
+                 JOIN menu_items mi ON mv.menu_item_id = mi.id
+                 WHERE oi.order_id = ?"
+            );
+            $stmt->execute([$order['id']]);
+            $order['items'] = $stmt->fetchAll();
+        }
+        return $orders;
+    }
+
+    public function updateKdsStatus($orderId, $status) {
+        $allowed = ['pending', 'preparing', 'done'];
+        if (!in_array($status, $allowed)) {
+            throw new \Exception("Invalid KDS status: $status");
+        }
+        $stmt = $this->db->prepare("UPDATE orders SET kds_status = ? WHERE id = ?");
+        return $stmt->execute([$status, $orderId]);
+    }
+
     public function getAnalytics($range) {
         $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)";
         $expense_filter = "AND expense_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)";

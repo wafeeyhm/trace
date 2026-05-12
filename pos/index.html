@@ -6,6 +6,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/print.css">
     <script>
         tailwind.config = { 
             darkMode: 'class', 
@@ -30,49 +31,211 @@
         }
     </script>
 </head>
-<body class="h-screen flex overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- Sidebar Navigation -->
-    <aside class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50">
-        <div class="text-accent text-2xl"><i class="fas fa-bolt"></i></div>
-        <nav class="flex flex-col gap-6">
-            <a href="index.html" class="nav-btn text-accent" title="Register"><i class="fas fa-th-large text-xl"></i></a>
-            <a href="../back-office/index.html" class="nav-btn text-slate-500 hover:text-white" title="Management"><i class="fas fa-cog text-xl"></i></a>
-        </nav>
-    </aside>
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="hidden w-full bg-amber-500 text-slate-950 text-center py-2 text-xs font-black uppercase tracking-widest z-[999] flex-shrink-0">
+        <i class="fas fa-wifi-slash mr-2"></i> Offline Mode — Orders will sync automatically when back online
+        <span id="sync-badge" class="hidden ml-2 bg-slate-950 text-amber-500 rounded-full px-2 py-0.5 text-[10px]">0</span>
+    </div>
 
-    <!-- Page: POS (Register) -->
-    <main id="pos-page" class="flex-1 flex flex-row h-full">
-        <div class="flex-1 flex flex-col h-full bg-slate-950/50">
-            <header class="p-8 flex justify-between items-center border-b border-white/5">
-                <h1 class="text-2xl font-black">Trace Pulse</h1>
-                <div class="relative w-96"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" placeholder="Search menu..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent transition-all"></div>
-            </header>
-            
-            <!-- Category Filter Bar -->
-            <div id="category-bar" class="px-8 py-4 flex gap-3 overflow-x-auto hide-scrollbar border-b border-white/5">
-                <!-- Categories will be rendered here -->
-            </div>
+    <!-- Sync Indicator -->
+    <div id="sync-indicator" class="hidden fixed top-4 right-4 z-[998] bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-3 text-xs font-bold">
+        <i class="fas fa-rotate animate-spin text-accent"></i>
+        <span>Syncing...</span>
+    </div>
 
-            <div id="product-grid" class="flex-1 p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto hide-scrollbar"></div>
-        </div>
-        <aside class="w-[400px] glass flex flex-col h-full border-l border-white/5">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5"><h2 class="font-black uppercase text-xs tracking-[0.2em]">Ticket</h2><button onclick="clearCart()" class="text-[10px] font-bold text-red-400 hover:text-red-300">Clear</button></div>
-            <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
-            <div class="p-8 bg-white/5 border-t border-white/10 space-y-4">
-                <div class="flex justify-between text-2xl font-black pt-4 border-t border-white/5"><span>Total</span><span id="cart-total" class="text-accent">BND $0.00</span></div>
-                <button onclick="openPayment()" class="w-full bg-accent text-slate-950 py-5 rounded-2xl font-black shadow-xl hover:scale-[1.02] active:scale-95 transition-all mt-4">CHARGE</button>
-            </div>
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50 flex-shrink-0">
+            <div class="text-accent text-2xl"><i class="fas fa-bolt"></i></div>
+            <nav class="flex flex-col gap-6">
+                <a href="index.html" class="nav-btn text-accent" title="Register"><i class="fas fa-th-large text-xl"></i></a>
+                <a href="kds.html" class="nav-btn text-slate-500 hover:text-white" title="Kitchen Display"><i class="fas fa-utensils text-xl"></i></a>
+                <a href="../back-office/index.html" class="nav-btn text-slate-500 hover:text-white" title="Management"><i class="fas fa-cog text-xl"></i></a>
+            </nav>
+            <!-- Theme Toggle -->
+            <button id="theme-toggle-btn" onclick="togglePOSTheme()" class="mt-auto nav-btn text-slate-500 hover:text-white" title="Toggle High Contrast">
+                <i class="fas fa-circle-half-stroke text-xl"></i>
+            </button>
         </aside>
-    </main>
 
-    <!-- Modals -->
-    <div id="variantModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6"><div class="glass w-full max-w-md rounded-[40px] p-10 text-center"><h2 id="var-item-name" class="text-2xl font-black mb-6">Choose Size</h2><div id="variant-list" class="space-y-3"></div><button onclick="closeModal('variantModal')" class="mt-8 text-slate-500 text-xs font-bold uppercase">Cancel</button></div></div>
-    
-    <div id="receiptModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[200] hidden items-center justify-center p-6"><div class="bg-white text-slate-950 w-full max-w-xs p-8 rounded-sm shadow-2xl font-mono text-[10px] space-y-4"><div class="text-center border-b border-dashed border-slate-300 pb-4"><h2 class="text-lg font-bold">TRACE PRO</h2><p id="rec-date"></p></div><div id="rec-items" class="space-y-1"></div><div class="border-t border-dashed border-slate-300 pt-4"><div class="flex justify-between font-bold text-sm"><span>TOTAL</span><span id="rec-total"></span></div></div><button onclick="closeModal('receiptModal')" class="w-full bg-slate-950 text-white py-3 rounded-md font-bold mt-4">DONE</button></div></div>
+        <!-- Page: POS (Register) -->
+        <main id="pos-page" class="flex-1 flex flex-row h-full overflow-hidden">
+            <div class="flex-1 flex flex-col h-full bg-slate-950/50 overflow-hidden">
+                <header class="p-6 flex justify-between items-center border-b border-white/5 flex-shrink-0">
+                    <div>
+                        <h1 class="text-2xl font-black">Trace Pulse</h1>
+                        <p id="current-time" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"></p>
+                    </div>
+                    <div class="relative w-80"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input id="search-input" type="text" placeholder="Search menu..." oninput="filterBySearch(this.value)" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent transition-all"></div>
+                </header>
+                
+                <!-- Category Filter Bar -->
+                <div id="category-bar" class="px-6 py-3 flex gap-3 overflow-x-auto hide-scrollbar border-b border-white/5 flex-shrink-0"></div>
+
+                <div id="product-grid" class="flex-1 p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-5 overflow-y-auto hide-scrollbar content-start"></div>
+            </div>
+
+            <!-- Cart Panel -->
+            <aside class="w-[400px] glass flex flex-col h-full border-l border-white/5 flex-shrink-0">
+                <div class="p-5 border-b border-white/5 flex justify-between items-center bg-white/5">
+                    <h2 class="font-black uppercase text-xs tracking-[0.2em]">Ticket</h2>
+                    <button onclick="clearCart()" class="text-[10px] font-bold text-red-400 hover:text-red-300">Clear</button>
+                </div>
+                <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-3"></div>
+                <div class="p-6 bg-white/5 border-t border-white/10 space-y-3 flex-shrink-0">
+                    <div class="flex justify-between text-2xl font-black pt-3 border-t border-white/5"><span>Total</span><span id="cart-total" class="text-accent">BND $0.00</span></div>
+                    <button onclick="openPayment()" class="w-full bg-accent text-slate-950 py-5 rounded-2xl font-black shadow-xl hover:scale-[1.02] active:scale-95 transition-all">CHARGE</button>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODALS                                                        -->
+    <!-- ============================================================ -->
+
+    <!-- Variant Selector Modal -->
+    <div id="variantModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-md rounded-[40px] p-10 text-center">
+            <h2 id="var-item-name" class="text-2xl font-black mb-6">Choose Size</h2>
+            <div id="variant-list" class="space-y-3"></div>
+            <button onclick="closeModal('variantModal')" class="mt-8 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Payment Modal (3-Stage) -->
+    <div id="paymentModal" class="fixed inset-0 z-[150] hidden items-center justify-center p-6" style="background:rgba(2,6,23,0.97)">
+        <div class="w-full max-w-md rounded-[40px] overflow-hidden" style="background:#0f172a; border:1px solid rgba(255,255,255,0.08)">
+            
+            <!-- Stage 1: Payment Method -->
+            <div id="pay-stage-1" class="payment-stage p-10">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Order Total</p>
+                <p id="pay-total-display" class="text-5xl font-black text-accent mb-10">BND $0.00</p>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Payment Method</p>
+                <div class="grid grid-cols-3 gap-4">
+                    <button onclick="selectPaymentMethod('cash')" class="pay-method-btn flex flex-col items-center justify-center p-6 rounded-3xl gap-3">
+                        <i class="fas fa-money-bill-wave text-3xl text-emerald-400"></i>
+                        <span class="text-xs font-black uppercase tracking-widest">Cash</span>
+                    </button>
+                    <button onclick="selectPaymentMethod('card')" class="pay-method-btn flex flex-col items-center justify-center p-6 rounded-3xl gap-3">
+                        <i class="fas fa-credit-card text-3xl text-sky-400"></i>
+                        <span class="text-xs font-black uppercase tracking-widest">Card</span>
+                    </button>
+                    <button onclick="selectPaymentMethod('ewallet')" class="pay-method-btn flex flex-col items-center justify-center p-6 rounded-3xl gap-3">
+                        <i class="fas fa-qrcode text-3xl text-accent"></i>
+                        <span class="text-xs font-black uppercase tracking-widest">QR</span>
+                    </button>
+                </div>
+                <button onclick="closeModal('paymentModal')" class="w-full mt-8 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+            </div>
+
+            <!-- Stage 2: Cash Numpad -->
+            <div id="pay-stage-2" class="payment-stage hidden p-8">
+                <button onclick="showPaymentStep(1)" class="text-slate-500 text-xs font-bold uppercase mb-6 flex items-center gap-2"><i class="fas fa-arrow-left"></i> Back</button>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Amount Tendered</p>
+                <div id="tender-display" class="text-5xl font-black text-white my-4 min-h-[60px]">BND $0.00</div>
+                <div class="h-px bg-white/5 mb-4"></div>
+                <div class="flex justify-between text-sm font-bold mb-6">
+                    <span class="text-slate-500 uppercase tracking-widest text-[10px]">Change Due</span>
+                    <span id="change-display" class="text-emerald-400 text-xl font-black">BND $0.00</span>
+                </div>
+                <!-- Numpad -->
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="numpadPress('1')" class="numpad-btn">1</button>
+                    <button onclick="numpadPress('2')" class="numpad-btn">2</button>
+                    <button onclick="numpadPress('3')" class="numpad-btn">3</button>
+                    <button onclick="numpadPress('4')" class="numpad-btn">4</button>
+                    <button onclick="numpadPress('5')" class="numpad-btn">5</button>
+                    <button onclick="numpadPress('6')" class="numpad-btn">6</button>
+                    <button onclick="numpadPress('7')" class="numpad-btn">7</button>
+                    <button onclick="numpadPress('8')" class="numpad-btn">8</button>
+                    <button onclick="numpadPress('9')" class="numpad-btn">9</button>
+                    <button onclick="numpadPress('.')" class="numpad-btn text-slate-400">.</button>
+                    <button onclick="numpadPress('0')" class="numpad-btn">0</button>
+                    <button onclick="numpadPress('back')" class="numpad-btn text-red-400"><i class="fas fa-delete-left"></i></button>
+                </div>
+                <button onclick="showPaymentStep(3)" id="proceed-to-confirm" class="w-full mt-5 bg-accent text-slate-950 py-5 rounded-2xl font-black text-sm uppercase tracking-widest disabled:opacity-40 transition-all" disabled>Confirm →</button>
+            </div>
+
+            <!-- Stage 3: Confirmation -->
+            <div id="pay-stage-3" class="payment-stage hidden p-10">
+                <button onclick="showPaymentStep(1)" class="text-slate-500 text-xs font-bold uppercase mb-6 flex items-center gap-2"><i class="fas fa-arrow-left"></i> Back</button>
+                <h3 class="text-xl font-black mb-6">Confirm Order</h3>
+                <div id="confirm-summary" class="space-y-2 text-sm mb-6"></div>
+                <div class="h-px bg-white/5 my-4"></div>
+                <div id="confirm-payment-line" class="text-xs text-slate-500 font-bold uppercase mb-6"></div>
+                <button onclick="confirmAndSubmit()" class="w-full bg-accent text-slate-950 py-5 rounded-2xl font-black shadow-xl text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                    <i class="fas fa-check mr-2"></i>CONFIRM & PRINT
+                </button>
+                <button onclick="closeModal('paymentModal')" class="w-full mt-4 text-slate-500 text-xs font-bold uppercase">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[200] hidden items-center justify-center p-6">
+        <div class="bg-white text-slate-950 w-full max-w-xs rounded-sm shadow-2xl">
+            <!-- Printable receipt content -->
+            <div id="receipt-content" class="p-8 font-mono text-[10px] space-y-3">
+                <div class="text-center border-b border-dashed border-slate-300 pb-4">
+                    <h2 class="text-lg font-bold">TRACE PRO</h2>
+                    <p class="text-[8px]">Cafe Management Suite</p>
+                    <p id="rec-date" class="mt-1"></p>
+                    <p id="rec-order-id" class="font-bold"></p>
+                </div>
+                <div id="rec-items" class="space-y-1"></div>
+                <div class="receipt-divider border-t border-dashed border-slate-300 pt-3 space-y-1">
+                    <div id="rec-tax-line" class="receipt-row flex justify-between hidden"><span>TAX</span><span id="rec-tax"></span></div>
+                    <div class="receipt-row receipt-total flex justify-between font-bold text-sm border-t border-dashed border-slate-300 pt-2 mt-2"><span>TOTAL</span><span id="rec-total"></span></div>
+                </div>
+                <div class="text-center border-t border-dashed border-slate-300 pt-3 space-y-1">
+                    <p id="rec-payment-method"></p>
+                    <p id="rec-change-line" class="hidden font-bold"></p>
+                    <p class="receipt-footer text-[8px] mt-2">Thank you for your visit!</p>
+                </div>
+            </div>
+            <div class="no-print flex gap-3 p-4 border-t border-slate-200">
+                <button onclick="printReceipt()" class="flex-1 bg-slate-950 text-white py-3 rounded-md font-bold text-xs flex items-center justify-center gap-2">
+                    <i class="fas fa-print"></i> Print
+                </button>
+                <button onclick="closeModal('receiptModal')" class="flex-1 bg-slate-100 text-slate-950 py-3 rounded-md font-bold text-xs">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js', { scope: './' })
+                .then(reg => console.log('SW registered:', reg.scope))
+                .catch(err => console.warn('SW registration failed:', err));
+        }
+
+        // Live clock
+        function updateClock() {
+            const el = document.getElementById('current-time');
+            if (el) el.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', weekday: 'short', day: 'numeric', month: 'short' });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // POS Theme persistence
+        function togglePOSTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'highcontrast' ? '' : 'highcontrast';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('pos_theme', next);
+        }
+        const savedTheme = localStorage.getItem('pos_theme');
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
 
     <script src="assets/js/theme.js"></script>
     <script src="assets/js/core.js"></script>
+    <script src="assets/js/offline-queue.js"></script>
     <script src="assets/js/pos.js"></script>
 </body>
 </html>

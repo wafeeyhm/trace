@@ -74,6 +74,7 @@ if ($action) {
                 tax_amount DECIMAL(10, 2) DEFAULT 0.00,
                 discount_amount DECIMAL(10, 2) DEFAULT 0.00,
                 payment_type ENUM('cash', 'card', 'ewallet') DEFAULT 'cash',
+                kds_status ENUM('pending', 'preparing', 'done') DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )",
             "order_items" => "CREATE TABLE IF NOT EXISTS order_items (

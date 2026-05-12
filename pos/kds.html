@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace Kitchen | KDS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body { overflow: hidden; }
+
+        .order-card {
+            transition: all 0.3s ease;
+            animation: slideIn 0.35s ease-out;
+        }
+        .order-card.removing {
+            animation: fadeOut 0.4s ease-in forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to   { opacity: 0; transform: scale(0.9); }
+        }
+
+        /* Timer urgency colors */
+        .timer-ok    { color: rgb(52, 211, 153); }
+        .timer-warn  { color: rgb(251, 191, 36); }
+        .timer-urgent { color: rgb(248, 113, 113); animation: urgentPulse 1s infinite; }
+        @keyframes urgentPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Status border colors */
+        .status-pending   { border-color: rgba(255,255,255,0.15); }
+        .status-preparing { border-color: rgba(251, 191, 36, 0.6); box-shadow: 0 0 20px rgba(251,191,36,0.15); }
+    </style>
+</head>
+<body class="h-screen flex flex-col" style="background: rgb(var(--color-bg)); color: rgb(var(--color-text));">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between px-8 py-5 border-b flex-shrink-0" style="border-color: rgba(255,255,255,0.08)">
+        <div class="flex items-center gap-4">
+            <div class="text-accent text-2xl"><i class="fas fa-utensils"></i></div>
+            <div>
+                <h1 class="text-xl font-black uppercase tracking-widest">Trace Kitchen</h1>
+                <p class="text-[10px] font-bold uppercase tracking-widest" style="color: rgb(var(--color-secondary))">Kitchen Display System</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div id="order-count" class="flex items-center gap-2 text-sm font-bold" style="color: rgb(var(--color-secondary))">
+                <i class="fas fa-layer-group"></i>
+                <span id="count-badge">0 orders</span>
+            </div>
+            <div id="kds-clock" class="text-2xl font-black tabular-nums"></div>
+            <div id="connection-indicator" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Live</span>
+            </div>
+        </div>
+        <a href="index.html" class="text-sm font-bold px-5 py-2 rounded-xl" style="background:rgba(255,255,255,0.05); color:rgb(var(--color-secondary))">
+            <i class="fas fa-arrow-left mr-2"></i>POS
+        </a>
+    </header>
+
+    <!-- Empty State -->
+    <div id="kds-empty" class="flex-1 flex flex-col items-center justify-center gap-4" style="color: rgba(255,255,255,0.15)">
+        <i class="fas fa-mug-hot text-8xl"></i>
+        <p class="text-xl font-black uppercase tracking-widest">All Clear</p>
+        <p class="text-sm font-bold uppercase tracking-widest">No pending orders</p>
+    </div>
+
+    <!-- Order Grid -->
+    <div id="kds-grid" class="flex-1 p-6 grid gap-5 overflow-y-auto hide-scrollbar" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-content: start;"></div>
+
+    <script src="assets/js/theme.js"></script>
+    <script src="assets/js/kds.js"></script>
+</body>
+</html>

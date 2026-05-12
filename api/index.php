@@ -43,6 +43,8 @@ $router->add('get_inventory_logs', InventoryController::class, 'logs');
 // --- Transactions & Analytics ---
 $router->add('process_order', TransactionController::class, 'processOrder');
 $router->add('get_analytics', TransactionController::class, 'analytics');
+$router->add('get_pending_orders', TransactionController::class, 'pendingOrders');
+$router->add('update_kds_status', TransactionController::class, 'updateKdsStatus');
 
 // --- Vendors ---
 $router->add('get_vendors', CatalogController::class, 'listVendors');
