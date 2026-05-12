@@ -48,13 +48,19 @@
                 <h1 class="text-2xl font-black">Trace Pulse</h1>
                 <div class="relative w-96"><i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" placeholder="Search menu..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent transition-all"></div>
             </header>
-            <div id="product-grid" class="flex-1 p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto hide-scrollbar"></div>
+            
+            <!-- Category Filter Bar -->
+            <div id="category-bar" class="px-8 py-4 flex gap-3 overflow-x-auto hide-scrollbar border-b border-white/5">
+                <!-- Categories will be rendered here -->
+            </div>
+
+            <div id="product-grid" class="flex-1 p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto hide-scrollbar"></div>
         </div>
         <aside class="w-[400px] glass flex flex-col h-full border-l border-white/5">
             <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5"><h2 class="font-black uppercase text-xs tracking-[0.2em]">Ticket</h2><button onclick="clearCart()" class="text-[10px] font-bold text-red-400 hover:text-red-300">Clear</button></div>
             <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
             <div class="p-8 bg-white/5 border-t border-white/10 space-y-4">
-                <div class="flex justify-between text-2xl font-black pt-4 border-t border-white/5"><span>Total</span><span id="cart-total" class="text-accent">$0.00</span></div>
+                <div class="flex justify-between text-2xl font-black pt-4 border-t border-white/5"><span>Total</span><span id="cart-total" class="text-accent">BND $0.00</span></div>
                 <button onclick="openPayment()" class="w-full bg-accent text-slate-950 py-5 rounded-2xl font-black shadow-xl hover:scale-[1.02] active:scale-95 transition-all mt-4">CHARGE</button>
             </div>
         </aside>

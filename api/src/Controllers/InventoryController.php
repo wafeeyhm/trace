@@ -25,11 +25,43 @@ class InventoryController extends BaseController {
         }
     }
 
+    public function add() {
+        if ($this->getRequestMethod() === 'POST') {
+            $data = $this->getPostData();
+            $id = $this->model->add($data);
+            $this->jsonResponse(['success' => true, 'id' => $id]);
+        }
+    }
+
+    public function update() {
+        if ($this->getRequestMethod() === 'POST') {
+            $data = $this->getPostData();
+            $id = $data['id'];
+            unset($data['id']);
+            $this->model->update($id, $data);
+            $this->jsonResponse(['success' => true]);
+        }
+    }
+
+    public function delete() {
+        if ($this->getRequestMethod() === 'POST') {
+            $data = $this->getPostData();
+            try {
+                $this->model->delete($data['id']);
+                $this->jsonResponse(['success' => true]);
+            } catch (\Exception $e) {
+                $this->jsonResponse(['error' => $e->getMessage()]);
+            }
+        }
+    }
+
     public function restock() {
         if ($this->getRequestMethod() === 'POST') {
             $data = $this->getPostData();
             try {
-                $this->model->restock($data['id'], $data['amount'], $data['reason'] ?? 'Restock');
+                // Support both 'amount' and 'purchase_amount' for compatibility
+                $amount = $data['purchase_amount'] ?? $data['amount'];
+                $this->model->restock($data['id'], $amount, $data['reason'] ?? 'Restock');
                 $this->jsonResponse(['success' => true]);
             } catch (\Exception $e) {
                 $this->jsonResponse(['error' => $e->getMessage()]);

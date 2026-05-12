@@ -114,10 +114,10 @@
 
         <div id="perf-sales" class="space-y-8">
             <div class="grid grid-cols-4 gap-8 mb-8">
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Revenue</p><h2 id="ana-rev" class="text-4xl font-black text-white">$0.00</h2></div>
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax</p><h2 id="ana-tax" class="text-4xl font-black text-emerald-400">$0.00</h2></div>
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Expenses</p><h2 id="ana-expenses" class="text-4xl font-black text-red-400">$0.00</h2></div>
-                <div class="glass p-8 rounded-3xl border border-accent/30"><p class="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Net Profit</p><h2 id="ana-net" class="text-4xl font-black text-accent">$0.00</h2></div>
+                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Revenue</p><h2 id="ana-rev" class="text-4xl font-black text-white">BND $0.00</h2></div>
+                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax</p><h2 id="ana-tax" class="text-4xl font-black text-emerald-400">BND $0.00</h2></div>
+                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Expenses</p><h2 id="ana-expenses" class="text-4xl font-black text-red-400">BND $0.00</h2></div>
+                <div class="glass p-8 rounded-3xl border border-accent/30"><p class="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Net Profit</p><h2 id="ana-net" class="text-4xl font-black text-accent">BND $0.00</h2></div>
             </div>
             <div class="glass p-12 rounded-[40px]"><canvas id="mainChart" height="100"></canvas></div>
         </div>
@@ -146,8 +146,79 @@
         </div>
     </div>
 
-    <!-- Modals (Ingredient, Product, etc.) -->
-    <div id="ingredientModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6"><div class="glass w-full max-w-md rounded-[40px] p-10"><h2 class="text-2xl font-black mb-8">Manage Ingredient</h2><form id="ingredientForm" class="space-y-6"><input type="hidden" id="ing-id"><div class="space-y-2"><label class="text-[10px] font-bold uppercase text-slate-500">Name</label><input type="text" id="ing-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3"></div><div class="flex gap-4 mt-8"><button type="button" onclick="closeModal('ingredientModal')" class="flex-1 text-slate-500">Cancel</button><button type="submit" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black">Save</button></div></form></div></div>
+    <!-- Modals -->
+    <div id="ingredientModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-xl rounded-[40px] p-10 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-black mb-8" id="ing-modal-title">Manage Ingredient</h2>
+            <form id="ingredientForm" class="space-y-6">
+                <input type="hidden" id="ing-id">
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-2 col-span-2">
+                        <label class="text-[10px] font-bold uppercase text-slate-500">Name</label>
+                        <input type="text" id="ing-name" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase text-slate-500">Category</label>
+                        <select id="ing-category" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-slate-100"></select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase text-slate-500">Min. Stock Level (Usage Units)</label>
+                        <input type="number" step="0.01" id="ing-min-stock" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                    </div>
+                </div>
+
+                <div class="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-6">
+                    <h3 class="text-[10px] font-black uppercase text-accent tracking-widest">Unit Conversion & Pricing</h3>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold uppercase text-slate-500">Purchase Unit (e.g. kg)</label>
+                            <input type="text" id="ing-purchase-unit" placeholder="kg" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold uppercase text-slate-500">Usage Unit (e.g. g)</label>
+                            <input type="text" id="ing-usage-unit" placeholder="g" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold uppercase text-slate-500">Conversion Factor</label>
+                            <input type="number" step="0.0001" id="ing-factor" placeholder="1000" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold uppercase text-slate-500">Cost per Purchase Unit (BND $)</label>
+                            <input type="number" step="0.0001" id="ing-purchase-cost" placeholder="25.00" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                        </div>
+                    </div>
+                    <div id="unit-preview" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center py-2 border-t border-white/5">
+                        1 [purchase] = [factor] [usage]
+                    </div>
+                </div>
+
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="closeModal('ingredientModal')" class="flex-1 text-slate-500 font-bold uppercase text-xs">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-accent text-slate-950 py-4 rounded-xl font-black uppercase text-xs tracking-widest">Save Ingredient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Restock Modal -->
+    <div id="restockModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[110] hidden items-center justify-center p-6">
+        <div class="glass w-full max-w-md rounded-[40px] p-10">
+            <h2 class="text-2xl font-black mb-8">Restock Ingredient</h2>
+            <form id="restockForm" class="space-y-6">
+                <input type="hidden" id="restock-id">
+                <div class="space-y-2">
+                    <label id="restock-label" class="text-[10px] font-bold uppercase text-slate-500">How many [units] received?</label>
+                    <input type="number" step="0.01" id="restock-amount" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                </div>
+                <div id="restock-preview" class="text-xs font-bold text-emerald-400 text-center"></div>
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="closeModal('restockModal')" class="flex-1 text-slate-500 font-bold uppercase text-xs">Cancel</button>
+                    <button type="submit" class="flex-[2] bg-emerald-500 text-slate-950 py-4 rounded-xl font-black uppercase text-xs tracking-widest">Confirm Restock</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- ... More modals would go here ... -->
 
     <script src="assets/js/theme.js"></script>

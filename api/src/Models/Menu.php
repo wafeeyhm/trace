@@ -25,7 +25,7 @@ class Menu {
             $item['variants'] = $stmt->fetchAll();
             
             foreach ($item['variants'] as &$v) {
-                $rStmt = $this->db->prepare("SELECT r.*, i.name as ingredient_name, i.unit FROM menu_recipes r JOIN inventory_items i ON r.inventory_item_id = i.id WHERE r.menu_variant_id = ?");
+                $rStmt = $this->db->prepare("SELECT r.*, i.name as ingredient_name, i.usage_unit as unit FROM menu_recipes r JOIN inventory_items i ON r.inventory_item_id = i.id WHERE r.menu_variant_id = ?");
                 $rStmt->execute([$v['id']]);
                 $v['recipes'] = $rStmt->fetchAll();
             }

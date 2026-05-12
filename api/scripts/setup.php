@@ -31,7 +31,9 @@ if ($action) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 category_id INT,
                 name VARCHAR(255) NOT NULL,
-                unit VARCHAR(20) DEFAULT 'unit',
+                purchase_unit VARCHAR(20) DEFAULT 'unit',
+                usage_unit VARCHAR(20) DEFAULT 'unit',
+                conversion_factor DECIMAL(10, 4) DEFAULT 1.0000,
                 cost_per_unit DECIMAL(10, 4) DEFAULT 0.0000,
                 stock_level DECIMAL(10, 2) DEFAULT 0.00,
                 min_stock DECIMAL(10, 2) DEFAULT 5.00,
@@ -123,28 +125,28 @@ if ($action) {
         $conn->query("INSERT INTO inventory_categories (name) VALUES ('Raw Materials'), ('Dairy'), ('Packaging')");
         $conn->query("INSERT INTO menu_categories (name) VALUES ('Coffee'), ('Bakery'), ('Cold Drinks')");
 
-        // Seed Inventory
-        $conn->query("INSERT INTO inventory_items (category_id, name, unit, cost_per_unit, stock_level) VALUES 
-            (1, 'Espresso Beans', 'kg', 25.00, 20.0),
-            (2, 'Whole Milk', 'L', 1.80, 50.0),
-            (1, 'Vanilla Syrup', 'pcs', 12.00, 10.0),
-            (3, 'Paper Cup 12oz', 'pcs', 0.15, 500.0)");
+        // Seed Inventory (1kg Espresso Beans = 1000g, 1L Milk = 1000ml)
+        $conn->query("INSERT INTO inventory_items (category_id, name, purchase_unit, usage_unit, conversion_factor, cost_per_unit, stock_level, min_stock) VALUES 
+            (1, 'Espresso Beans', 'kg', 'g', 1000, 0.025, 20000, 1000),
+            (2, 'Whole Milk', 'L', 'ml', 1000, 0.0018, 50000, 5000),
+            (1, 'Vanilla Syrup', 'bottle', 'shot', 25, 0.48, 250, 50),
+            (3, 'Paper Cup 12oz', 'sleeve', 'pcs', 50, 0.15, 500, 100)");
 
-        // Seed Menu
-        $conn->query("INSERT INTO menu_items (category_id, name) VALUES (1, 'Caffe Latte'), (1, 'Cappuccino'), (2, 'Croissant')");
+        // Seed Menu (BND Prices)
+        $conn->query("INSERT INTO menu_items (category_id, name) VALUES (1, 'Caffe Latte'), (1, 'Cappuccino'), (2, 'Butter Croissant')");
         
         // Seed Variants
         $conn->query("INSERT INTO menu_variants (menu_item_id, name, price) VALUES 
-            (1, 'Regular (12oz)', 4.00), (1, 'Large (16oz)', 5.00),
-            (2, 'Standard', 3.95),
+            (1, 'Regular (12oz)', 4.50), (1, 'Large (16oz)', 5.50),
+            (2, 'Standard', 4.80),
             (3, 'Classic', 3.50)");
 
-        // Seed Recipes
+        // Seed Recipes (using usage units)
         $conn->query("INSERT INTO menu_recipes (menu_variant_id, inventory_item_id, quantity) VALUES 
-            (1, 1, 0.018), (1, 2, 0.250), (1, 4, 1.000),
-            (2, 1, 0.024), (2, 2, 0.350), (2, 4, 1.000)");
+            (1, 1, 18), (1, 2, 250), (1, 4, 1),
+            (2, 1, 24), (2, 2, 350), (2, 4, 1)");
 
-        $results[] = ['task' => 'Loyverse Seeding', 'status' => 'success', 'msg' => 'Professional Data Loaded'];
+        $results[] = ['task' => 'Trace Phase One Seeding', 'status' => 'success', 'msg' => 'BND Data Loaded'];
     }
 
     if ($action === 'reset') {

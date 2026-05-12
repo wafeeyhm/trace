@@ -76,14 +76,26 @@ async function renderBackOffice() {
     if (activeBackOfficeTab === 'ingredients' && invTable) {
         invTable.innerHTML = inventory.map(item => {
             const isLow = parseFloat(item.stock_level) <= parseFloat(item.min_stock);
+            const purchaseEquiv = (parseFloat(item.stock_level) / parseFloat(item.conversion_factor)).toFixed(2);
             return `<tr class="hover:bg-white/5 transition-colors">
-                <td class="px-8 py-5"><div class="font-bold text-slate-100">${item.name}</div><div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${item.unit}</div></td>
+                <td class="px-8 py-5">
+                    <div class="font-bold text-slate-100">${item.name}</div>
+                    <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${item.usage_unit} (Used) | ${item.purchase_unit} (Bought)</div>
+                </td>
                 <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase">${item.category_name || 'None'}</td>
-                <td class="px-8 py-5"><div class="flex items-center gap-3"><span class="font-black text-sm ${isLow ? 'text-red-400' : 'text-slate-100'}">${parseFloat(item.stock_level).toFixed(2)}</span>${isLow ? '<span class="bg-red-500/10 text-red-500 text-[8px] font-black uppercase px-2 py-1 rounded border border-red-500/20">Low Stock</span>' : ''}</div></td>
+                <td class="px-8 py-5">
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col">
+                            <span class="font-black text-sm ${isLow ? 'text-red-400' : 'text-slate-100'}">${parseFloat(item.stock_level).toFixed(1)} ${item.usage_unit}</span>
+                            <span class="text-[9px] text-slate-500 font-bold">≈ ${purchaseEquiv} ${item.purchase_unit}</span>
+                        </div>
+                        ${isLow ? '<span class="bg-red-500/10 text-red-500 text-[8px] font-black uppercase px-2 py-1 rounded border border-red-500/20">Low Stock</span>' : ''}
+                    </div>
+                </td>
                 <td class="px-8 py-5 text-right space-x-2">
                     <button onclick="openRestockModal(${item.id})" class="text-emerald-400 p-2 hover:scale-110 transition-transform" title="Restock"><i class="fas fa-plus-circle"></i></button>
-                    <button onclick="editIngredient(${item.id})" class="text-accent p-2"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteIngredient(${item.id})" class="text-red-500 p-2"><i class="fas fa-trash"></i></button>
+                    <button onclick="editIngredient(${item.id})" class="text-accent p-2 hover:scale-110 transition-transform" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteIngredient(${item.id})" class="text-red-500 p-2 hover:scale-110 transition-transform" title="Delete"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -92,7 +104,7 @@ async function renderBackOffice() {
             <td class="px-8 py-5 font-bold text-slate-100">${item.name}</td>
             <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase whitespace-nowrap">${item.category_name || 'General'}</td>
             <td class="px-8 py-5 text-xs text-slate-400 font-bold uppercase whitespace-nowrap">${item.vendor_name || 'In-House'}</td>
-            <td class="px-8 py-5 w-1/3"><div class="space-y-2">${(item.variants || []).map(v => `<div class="flex justify-between items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-[10px] font-black uppercase text-slate-500">${v.name}</span><span class="text-slate-100 font-mono text-[10px]">$${parseFloat(v.price).toFixed(2)}</span></div>`).join('')}</div></td>
+            <td class="px-8 py-5 w-1/3"><div class="space-y-2">${(item.variants || []).map(v => `<div class="flex justify-between items-center bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-[10px] font-black uppercase text-slate-500">${v.name}</span><span class="text-slate-100 font-mono text-[10px]">BND $${parseFloat(v.price).toFixed(2)}</span></div>`).join('')}</div></td>
             <td class="px-8 py-5 text-right whitespace-nowrap space-x-2">
                 <button onclick="editMenuItem(${item.id})" class="text-accent p-2 hover:scale-110 transition-transform" title="Edit Product"><i class="fas fa-edit"></i></button>
                 <button onclick="editRecipe(${item.id})" class="text-sky-400 p-2 hover:scale-110 transition-transform" title="Recipe Builder"><i class="fas fa-mortar-pestle"></i></button>
@@ -108,9 +120,9 @@ async function renderBackOffice() {
                 const margin = v.price > 0 ? (profit / v.price) * 100 : 0;
                 rows.push(`<tr class="hover:bg-white/5 transition-colors">
                     <td class="px-8 py-5"><div class="font-bold text-slate-100">${item.name}</div><div class="text-[10px] font-black uppercase text-slate-500">${v.name}</div></td>
-                    <td class="px-8 py-5 text-right font-mono font-bold">$${parseFloat(v.price).toFixed(2)}</td>
-                    <td class="px-8 py-5 text-right font-mono text-slate-400">$${cogs.toFixed(2)}</td>
-                    <td class="px-8 py-5 text-right font-mono text-emerald-400 font-bold">$${profit.toFixed(2)}</td>
+                    <td class="px-8 py-5 text-right font-mono font-bold">BND $${parseFloat(v.price).toFixed(2)}</td>
+                    <td class="px-8 py-5 text-right font-mono text-slate-400">BND $${cogs.toFixed(2)}</td>
+                    <td class="px-8 py-5 text-right font-mono text-emerald-400 font-bold">BND $${profit.toFixed(2)}</td>
                     <td class="px-8 py-5 text-right font-black ${margin > 50 ? 'text-emerald-400' : 'text-yellow-400'}">${margin.toFixed(1)}%</td>
                 </tr>`);
             });
@@ -150,7 +162,7 @@ function renderPerformance() {
     } else if (activePerformanceTab === 'expenses') {
         const eBody = document.getElementById('perf-expenses-table');
         if (eBody) {
-            eBody.innerHTML = expenses.map(e => `<tr><td class="px-8 py-5 text-xs text-slate-400 font-mono">${e.expense_date}</td><td class="px-8 py-5 font-bold text-slate-100">${e.description}</td><td class="px-8 py-5 text-xs text-red-400 font-bold">$${e.amount}</td></tr>`).join('');
+            eBody.innerHTML = expenses.map(e => `<tr><td class="px-8 py-5 text-xs text-slate-400 font-mono">${e.expense_date}</td><td class="px-8 py-5 font-bold text-slate-100">${e.description}</td><td class="px-8 py-5 text-xs text-red-400 font-bold">BND $${e.amount}</td></tr>`).join('');
         }
     } else if (activePerformanceTab === 'forecast') {
         loadAnalytics('month').then(() => updateForecast());
@@ -161,10 +173,10 @@ async function loadAnalytics(range) {
     try {
         const d = await fetchJSON(`../api/?action=get_analytics&range=${range}`);
         analyticsData = d;
-        document.getElementById('ana-rev').textContent = `$${d.revenue.toFixed(2)}`;
-        document.getElementById('ana-tax').textContent = `$${d.tax_collected.toFixed(2)}`;
-        document.getElementById('ana-expenses').textContent = `$${d.expenses.toFixed(2)}`;
-        document.getElementById('ana-net').textContent = `$${d.net_profit.toFixed(2)}`;
+        document.getElementById('ana-rev').textContent = `BND $${d.revenue.toFixed(2)}`;
+        document.getElementById('ana-tax').textContent = `BND $${d.tax_collected.toFixed(2)}`;
+        document.getElementById('ana-expenses').textContent = `BND $${d.expenses.toFixed(2)}`;
+        document.getElementById('ana-net').textContent = `BND $${d.net_profit.toFixed(2)}`;
 
         const canvas = document.getElementById('mainChart');
         if (!canvas) return;
@@ -188,11 +200,27 @@ function updateForecast() {
     // ... simplified forecast logic ...
 }
 
+// Unit Conversion Preview Logic
+['ing-purchase-unit', 'ing-usage-unit', 'ing-factor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.oninput = updateUnitPreview;
+});
+
+function updateUnitPreview() {
+    const pUnit = document.getElementById('ing-purchase-unit').value || '[purchase]';
+    const uUnit = document.getElementById('ing-usage-unit').value || '[usage]';
+    const factor = document.getElementById('ing-factor').value || '[factor]';
+    document.getElementById('unit-preview').textContent = `1 ${pUnit} = ${factor} ${uUnit}`;
+}
+
 // Add New Button Logic
 document.getElementById('add-btn').onclick = () => {
     if (activeBackOfficeTab === 'ingredients') {
+        document.getElementById('ing-modal-title').textContent = 'Add Ingredient';
         document.getElementById('ingredientForm').reset();
+        document.getElementById('ing-id').value = '';
         document.getElementById('ing-category').innerHTML = invCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        updateUnitPreview();
         openModal('ingredientModal');
     } else if (activeBackOfficeTab === 'menu') {
         document.getElementById('productForm').reset();
@@ -202,8 +230,109 @@ document.getElementById('add-btn').onclick = () => {
     }
 };
 
-// ... remaining CRUD handlers (similar to original app.js but with updated paths) ...
-// For brevity, I'm including the core logic structure. In a real scenario, I'd port all functions.
+// Ingredient CRUD
+async function editIngredient(id) {
+    const item = inventory.find(i => i.id == id);
+    if (!item) return;
+    
+    document.getElementById('ing-modal-title').textContent = 'Edit Ingredient';
+    document.getElementById('ing-id').value = item.id;
+    document.getElementById('ing-name').value = item.name;
+    document.getElementById('ing-category').innerHTML = invCats.map(c => `<option value="${c.id}" ${c.id == item.category_id ? 'selected' : ''}>${c.name}</option>`).join('');
+    document.getElementById('ing-min-stock').value = item.min_stock;
+    document.getElementById('ing-purchase-unit').value = item.purchase_unit;
+    document.getElementById('ing-usage-unit').value = item.usage_unit;
+    document.getElementById('ing-factor').value = item.conversion_factor;
+    // Calculate purchase cost: cost_per_usage * conversion_factor
+    document.getElementById('ing-purchase-cost').value = (parseFloat(item.cost_per_unit) * parseFloat(item.conversion_factor)).toFixed(4);
+    
+    updateUnitPreview();
+    openModal('ingredientModal');
+}
+
+document.getElementById('ingredientForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('ing-id').value;
+    const factor = parseFloat(document.getElementById('ing-factor').value);
+    const pCost = parseFloat(document.getElementById('ing-purchase-cost').value);
+    
+    const data = {
+        name: document.getElementById('ing-name').value,
+        category_id: document.getElementById('ing-category').value,
+        min_stock: document.getElementById('ing-min-stock').value,
+        purchase_unit: document.getElementById('ing-purchase-unit').value,
+        usage_unit: document.getElementById('ing-usage-unit').value,
+        conversion_factor: factor,
+        cost_per_unit: (pCost / factor).toFixed(6) // Store cost per usage unit
+    };
+
+    const action = id ? 'update_inventory_item' : 'add_inventory_item';
+    if (id) data.id = id;
+
+    try {
+        const res = await fetch(`../api/?action=${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const d = await res.json();
+        if (d.success) {
+            closeModal('ingredientModal');
+            initLens();
+        } else { alert(d.error || 'Save failed'); }
+    } catch (e) { alert('Connection error'); }
+};
+
+async function deleteIngredient(id) {
+    if (!confirm('Are you sure? This will permanently remove the ingredient.')) return;
+    try {
+        const res = await fetch('../api/?action=delete_inventory_item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const d = await res.json();
+        if (d.success) initLens();
+        else alert(d.error || 'Delete failed');
+    } catch (e) { alert('Connection error'); }
+}
+
+// Restock Logic
+function openRestockModal(id) {
+    const item = inventory.find(i => i.id == id);
+    if (!item) return;
+    document.getElementById('restock-id').value = id;
+    document.getElementById('restock-label').textContent = `How many ${item.purchase_unit} of ${item.name} received?`;
+    document.getElementById('restock-amount').value = '';
+    document.getElementById('restock-preview').textContent = '';
+    
+    document.getElementById('restock-amount').oninput = (e) => {
+        const val = parseFloat(e.target.value) || 0;
+        const usage = (val * item.conversion_factor).toFixed(1);
+        document.getElementById('restock-preview').textContent = `+ ${usage} ${item.usage_unit} will be added to stock`;
+    };
+    
+    openModal('restockModal');
+}
+
+document.getElementById('restockForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('restock-id').value;
+    const amount = document.getElementById('restock-amount').value;
+    
+    try {
+        const res = await fetch('../api/?action=restock_item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, purchase_amount: amount })
+        });
+        const d = await res.json();
+        if (d.success) {
+            closeModal('restockModal');
+            initLens();
+        } else { alert(d.error || 'Restock failed'); }
+    } catch (e) { alert('Connection error'); }
+};
 
 window.addEventListener('themeChanged', () => {
     if (!document.getElementById('analytics-page').classList.contains('hidden')) {

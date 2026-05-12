@@ -34,6 +34,9 @@ $router->add('get_menu_categories', MenuController::class, 'listCategories');
 $router->add('get_inventory', InventoryController::class, 'list');
 $router->add('get_inventory_categories', InventoryController::class, 'listCategories');
 $router->add('add_inventory_category', InventoryController::class, 'addCategory');
+$router->add('add_inventory_item', InventoryController::class, 'add');
+$router->add('update_inventory_item', InventoryController::class, 'update');
+$router->add('delete_inventory_item', InventoryController::class, 'delete');
 $router->add('restock_item', InventoryController::class, 'restock');
 $router->add('get_inventory_logs', InventoryController::class, 'logs');
 
