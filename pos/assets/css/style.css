@@ -1,93 +1,248 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-:root, body[data-theme="cyber-trace"] {
-    --color-bg: 15 23 42;
-    --color-text: 248 250 252;
-    --color-accent: 0 245 255;
-    --color-secondary: 51 65 85;
-    --color-danger: 244 63 94;
-    --color-success: 16 185 129;
-    --color-glass-bg: 30 41 59;
+/* ===========================
+   DESIGN TOKENS
+   =========================== */
+:root {
+    --color-bg:        15 23 42;
+    --color-text:      248 250 252;
+    --color-accent:    0 245 255;
+    --color-secondary: 100 116 139;
+    --color-danger:    244 63 94;
+    --color-success:   16 185 129;
+    --color-glass-bg:  30 41 59;
 }
 
 body[data-theme="botanical"] {
-    --color-bg: 239 236 229;
-    --color-text: 44 51 51;
-    --color-accent: 95 116 100;
+    --color-bg:        239 236 229;
+    --color-text:      44 51 51;
+    --color-accent:    95 116 100;
     --color-secondary: 160 165 159;
-    --color-danger: 217 144 91;
-    --color-success: 95 116 100;
-    --color-glass-bg: 255 255 255;
+    --color-danger:    217 144 91;
+    --color-success:   95 116 100;
+    --color-glass-bg:  255 255 255;
 }
 
 body[data-theme="xau"] {
-    --color-bg: 18 18 18;
-    --color-text: 255 255 255;
-    --color-accent: 197 160 89;
-    --color-secondary: 42 42 42;
-    --color-danger: 239 68 64; 
-    --color-success: 78 159 61;
-    --color-glass-bg: 30 30 30;
+    --color-bg:        18 18 18;
+    --color-text:      255 255 255;
+    --color-accent:    197 160 89;
+    --color-secondary: 110 110 110;
+    --color-danger:    239 68 64;
+    --color-success:   78 159 61;
+    --color-glass-bg:  30 30 30;
 }
 
 body[data-theme="desert"] {
-    --color-bg: 255 232 214;
-    --color-text: 63 66 56;
-    --color-accent: 107 112 92;
+    --color-bg:        255 232 214;
+    --color-text:      63 66 56;
+    --color-accent:    107 112 92;
     --color-secondary: 165 165 141;
-    --color-danger: 200 80 50; 
-    --color-success: 107 112 92;
-    --color-glass-bg: 240 220 200;
-}
-
-body { font-family: 'Inter', sans-serif; background-color: rgb(var(--color-bg)); color: rgb(var(--color-text)); overflow: hidden; }
-.glass { background: rgb(var(--color-glass-bg) / 0.7); backdrop-filter: blur(12px); border: 1px solid rgb(var(--color-text) / 0.1); }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.active-tab { border-bottom: 2px solid rgb(var(--color-accent)); color: rgb(var(--color-accent)); }
-
-/* Custom Scrollbar for non-hidden areas */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgb(var(--color-text) / 0.1); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgb(var(--color-text) / 0.2); }
-
-/* Low Stock Visuals */
-.low-stock-warning {
-    border-color: rgba(245, 158, 11, 0.5) !important;
-    animation: amber-glow 2s infinite;
-}
-
-@keyframes amber-glow {
-    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-    50% { box-shadow: 0 0 20px 0 rgba(245, 158, 11, 0.3); }
-    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    --color-danger:    200 80 50;
+    --color-success:   107 112 92;
+    --color-glass-bg:  240 220 200;
 }
 
 /* ===========================
    HIGH-CONTRAST THEME
    =========================== */
-[data-theme="highcontrast"] {
-    --color-bg: 10 10 10;
-    --color-text: 255 255 255;
-    --color-accent: 255 215 0;
-    --color-secondary: 190 190 190;
-    --color-danger: 255 80 80;
-    --color-success: 50 230 100;
-    --color-glass-bg: 20 20 20;
+[data-theme="highcontrast"],
+body[data-theme="highcontrast"] {
+    --color-bg:        10 10 10;
+    --color-text:      255 255 255;
+    --color-accent:    255 215 0;
+    --color-secondary: 200 200 200;
+    --color-danger:    255 80 80;
+    --color-success:   50 230 100;
+    --color-glass-bg:  20 20 20;
 }
-[data-theme="highcontrast"] .glass {
-    border: 2px solid rgba(255,255,255,0.2);
+[data-theme="highcontrast"] .glass,
+body[data-theme="highcontrast"] .glass {
+    border: 2px solid rgba(255,255,255,0.25) !important;
 }
-[data-theme="highcontrast"] .low-stock-warning {
+[data-theme="highcontrast"] .low-stock-warning,
+body[data-theme="highcontrast"] .low-stock-warning {
     border-color: rgba(255, 200, 0, 0.9) !important;
+}
+[data-theme="highcontrast"] .numpad-btn,
+body[data-theme="highcontrast"] .numpad-btn {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.3);
+    font-size: 1.8rem;
 }
 
 /* ===========================
-   PAYMENT MODAL STYLES
+   BASE
+   =========================== */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+    overflow: hidden;
+}
+
+.glass {
+    background: rgb(var(--color-glass-bg) / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgb(var(--color-text) / 0.08);
+}
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+::-webkit-scrollbar          { width: 4px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: rgb(var(--color-text) / 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--color-text) / 0.2); }
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+.nav-btn:hover  { background: rgba(255,255,255,0.08); }
+.nav-btn:active { transform: scale(0.92); }
+
+/* ===========================
+   LOW STOCK INDICATOR
+   =========================== */
+.low-stock-warning {
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    animation: amber-glow 2s infinite;
+}
+@keyframes amber-glow {
+    0%   { box-shadow: 0 0 0  0 rgba(245, 158, 11, 0); }
+    50%  { box-shadow: 0 0 20px 0 rgba(245, 158, 11, 0.3); }
+    100% { box-shadow: 0 0 0  0 rgba(245, 158, 11, 0); }
+}
+
+/* ===========================
+   TAP-REVEAL SEARCH
+   =========================== */
+.search-reveal-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+}
+
+.search-icon-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.875rem;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgb(var(--color-secondary));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    z-index: 1;
+}
+.search-icon-btn:hover  { background: rgba(var(--color-accent), 0.15); color: rgb(var(--color-accent)); }
+.search-icon-btn:active { transform: scale(0.92); }
+
+.search-expand-area {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    max-width: 0;
+    opacity: 0;
+    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.3s ease;
+    margin-left: 0;
+}
+
+.search-reveal-wrap.search-open .search-expand-area {
+    max-width: 20rem;
+    opacity: 1;
+    margin-left: 0.5rem;
+}
+
+.search-input {
+    width: 16rem;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0.875rem;
+    padding: 0.65rem 1rem;
+    color: rgb(var(--color-text));
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.search-input::placeholder { color: rgb(var(--color-secondary)); }
+.search-input:focus {
+    border-color: rgba(var(--color-accent), 0.5);
+    box-shadow: 0 0 0 3px rgba(var(--color-accent), 0.1);
+}
+
+.search-close-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: none;
+    border: none;
+    color: rgb(var(--color-secondary));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.25rem;
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+}
+.search-close-btn:hover { color: rgb(var(--color-danger)); }
+
+/* ===========================
+   ORDER TYPE TOGGLE
+   =========================== */
+.ot-btn {
+    padding: 0.875rem 0.5rem;
+    border-radius: 1rem;
+    border: 1.5px solid;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    font-family: 'Inter', sans-serif;
+}
+.ot-btn:active { transform: scale(0.95); }
+
+.ot-inactive {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.08);
+    color: rgb(var(--color-secondary));
+}
+.ot-inactive:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+    color: rgb(var(--color-text));
+}
+.ot-active {
+    background: rgba(var(--color-accent), 0.15);
+    border-color: rgba(var(--color-accent), 0.5);
+    color: rgb(var(--color-accent));
+    box-shadow: 0 0 16px rgba(var(--color-accent), 0.12);
+}
+
+/* ===========================
+   PAYMENT MODAL
    =========================== */
 .payment-stage { width: 100%; }
 
-/* Payment Method Buttons */
 .pay-method-btn {
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
@@ -104,7 +259,9 @@ body { font-family: 'Inter', sans-serif; background-color: rgb(var(--color-bg));
 }
 .pay-method-btn:active { transform: scale(0.97); }
 
-/* Numpad Buttons */
+/* ===========================
+   NUMPAD
+   =========================== */
 .numpad-btn {
     min-height: 70px;
     width: 100%;
@@ -119,12 +276,7 @@ body { font-family: 'Inter', sans-serif; background-color: rgb(var(--color-bg));
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Inter', sans-serif;
 }
-.numpad-btn:hover { background: rgba(var(--color-accent), 0.2); border-color: rgba(var(--color-accent), 0.3); }
+.numpad-btn:hover  { background: rgba(var(--color-accent), 0.2); border-color: rgba(var(--color-accent), 0.3); }
 .numpad-btn:active { transform: scale(0.93); background: rgba(var(--color-accent), 0.35); }
-
-[data-theme="highcontrast"] .numpad-btn {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.25);
-    font-size: 1.8rem;
-}

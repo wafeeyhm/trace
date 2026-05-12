@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trace Kitchen | KDS</title>
+    <meta name="description" content="Trace Kitchen Display System — real-time order queue for kitchen staff.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -26,18 +27,18 @@
             to   { opacity: 0; transform: scale(0.9); }
         }
 
-        /* Timer urgency colors */
-        .timer-ok    { color: rgb(52, 211, 153); }
-        .timer-warn  { color: rgb(251, 191, 36); }
+        /* Timer urgency colours */
+        .timer-ok     { color: rgb(52, 211, 153); }
+        .timer-warn   { color: rgb(251, 191, 36); }
         .timer-urgent { color: rgb(248, 113, 113); animation: urgentPulse 1s infinite; }
         @keyframes urgentPulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50%       { opacity: 0.5; }
         }
 
-        /* Status border colors */
+        /* Status border colours */
         .status-pending   { border-color: rgba(255,255,255,0.15); }
-        .status-preparing { border-color: rgba(251, 191, 36, 0.6); box-shadow: 0 0 20px rgba(251,191,36,0.15); }
+        .status-preparing { border-color: rgba(251,191,36,0.6); box-shadow: 0 0 20px rgba(251,191,36,0.15); }
     </style>
 </head>
 <body class="h-screen flex flex-col" style="background: rgb(var(--color-bg)); color: rgb(var(--color-text));">
@@ -51,6 +52,7 @@
                 <p class="text-[10px] font-bold uppercase tracking-widest" style="color: rgb(var(--color-secondary))">Kitchen Display System</p>
             </div>
         </div>
+
         <div class="flex items-center gap-6">
             <div id="order-count" class="flex items-center gap-2 text-sm font-bold" style="color: rgb(var(--color-secondary))">
                 <i class="fas fa-layer-group"></i>
@@ -61,10 +63,18 @@
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Live</span>
             </div>
+
+            <!-- High Contrast Toggle -->
+            <button onclick="toggleKDSTheme()" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all hover:scale-105 active:scale-95"
+                    style="background:rgba(255,255,255,0.07); color:rgb(var(--color-secondary))" title="Toggle High Contrast">
+                <i class="fas fa-circle-half-stroke"></i>
+                <span>Contrast</span>
+            </button>
+
+            <a href="index.html" class="text-sm font-bold px-5 py-2 rounded-xl" style="background:rgba(255,255,255,0.05); color:rgb(var(--color-secondary))">
+                <i class="fas fa-arrow-left mr-2"></i>POS
+            </a>
         </div>
-        <a href="index.html" class="text-sm font-bold px-5 py-2 rounded-xl" style="background:rgba(255,255,255,0.05); color:rgb(var(--color-secondary))">
-            <i class="fas fa-arrow-left mr-2"></i>POS
-        </a>
     </header>
 
     <!-- Empty State -->
@@ -75,7 +85,8 @@
     </div>
 
     <!-- Order Grid -->
-    <div id="kds-grid" class="flex-1 p-6 grid gap-5 overflow-y-auto hide-scrollbar" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-content: start;"></div>
+    <div id="kds-grid" class="flex-1 p-6 grid gap-5 overflow-y-auto hide-scrollbar hidden"
+         style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-content: start;"></div>
 
     <script src="assets/js/theme.js"></script>
     <script src="assets/js/kds.js"></script>

@@ -2,18 +2,15 @@
 const QUEUE_KEY = 'trace_offline_queue';
 
 function getQueue() {
-    try {
-        return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-    } catch {
-        return [];
-    }
+    try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+    catch { return []; }
 }
 
 function saveQueue(q) {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
 }
 
-function queueOrder(cart, total, tax, paymentType) {
+function queueOrder(cart, total, tax, paymentType, orderType = 'dine_in') {
     const q = getQueue();
     q.push({
         id: `offline_${Date.now()}`,
@@ -21,6 +18,7 @@ function queueOrder(cart, total, tax, paymentType) {
         total,
         tax,
         payment_type: paymentType,
+        order_type: orderType,
         queued_at: new Date().toISOString()
     });
     saveQueue(q);
@@ -32,12 +30,15 @@ function getQueueCount() {
 }
 
 function updateQueueBadge() {
-    const badge = document.getElementById('sync-badge');
-    const count = getQueueCount();
+    const badge  = document.getElementById('sync-badge');
+    const banner = document.getElementById('offline-banner');
+    const count  = getQueueCount();
+
     if (!badge) return;
     if (count > 0) {
         badge.textContent = count;
         badge.classList.remove('hidden');
+        if (banner) banner.classList.remove('hidden');
     } else {
         badge.classList.add('hidden');
     }
@@ -63,18 +64,17 @@ async function syncQueue() {
                     cart: order.cart,
                     total: order.total,
                     tax: order.tax,
-                    payment_type: order.payment_type
+                    payment_type: order.payment_type,
+                    order_type: order.order_type || 'dine_in'
                 })
             });
             const d = await res.json();
             if (!d.success) {
-                // Stock conflict or other error — keep in queue but flag it
                 failed.push({ ...order, sync_error: d.error });
             }
         } catch {
-            // Network still bad — stop trying
             failed.push(order);
-            break;
+            break; // network still bad, stop retrying
         }
     }
 
@@ -86,15 +86,13 @@ async function syncQueue() {
             indicator.querySelector('span').textContent = `${failed.length} order(s) failed to sync`;
             setTimeout(() => indicator.classList.add('hidden'), 5000);
         } else {
-            indicator.classList.add('hidden');
+            indicator.querySelector('span').textContent = 'All orders synced ✓';
+            setTimeout(() => indicator.classList.add('hidden'), 2000);
         }
     }
 
-    // Refresh POS data after sync
-    if (failed.length === 0 && typeof initPOS === 'function') {
-        initPOS();
-    }
+    if (failed.length === 0 && typeof initPOS === 'function') initPOS();
 }
 
-// Initialize badge on load
+// Initialize badge on page load
 document.addEventListener('DOMContentLoaded', updateQueueBadge);

@@ -3,6 +3,7 @@ let cart = [];
 let currentItem = null;
 let currentCategory = null;
 let searchQuery = '';
+let orderType = 'dine_in'; // 'dine_in' | 'takeaway'
 
 // Payment state
 let selectedPaymentMethod = 'cash';
@@ -17,9 +18,58 @@ async function initPOS() {
         renderCategories();
         renderGrid();
         renderCart();
+        renderOrderType();
     } catch (e) {
         showErrorMessage(e.message);
     }
+}
+
+// ============================================================
+// ORDER TYPE
+// ============================================================
+function setOrderType(type) {
+    orderType = type;
+    renderOrderType();
+}
+
+function renderOrderType() {
+    ['dine_in', 'takeaway'].forEach(type => {
+        const btn = document.getElementById(`ot-${type}`);
+        if (!btn) return;
+        if (type === orderType) {
+            btn.classList.add('ot-active');
+            btn.classList.remove('ot-inactive');
+        } else {
+            btn.classList.remove('ot-active');
+            btn.classList.add('ot-inactive');
+        }
+    });
+}
+
+// ============================================================
+// TAP-REVEAL SEARCH
+// ============================================================
+function toggleSearch() {
+    const wrap = document.getElementById('search-wrap');
+    const input = document.getElementById('search-input');
+    if (!wrap) return;
+    const isOpen = wrap.classList.contains('search-open');
+    if (isOpen) {
+        wrap.classList.remove('search-open');
+        searchQuery = '';
+        if (input) input.value = '';
+        renderGrid();
+    } else {
+        wrap.classList.add('search-open');
+        setTimeout(() => input && input.focus(), 150);
+    }
+}
+
+function filterBySearch(q) {
+    searchQuery = q.toLowerCase();
+    currentCategory = null;
+    renderCategories();
+    renderGrid();
 }
 
 // ============================================================
@@ -41,13 +91,9 @@ function setCategory(id) {
     searchQuery = '';
     const si = document.getElementById('search-input');
     if (si) si.value = '';
-    renderCategories();
-    renderGrid();
-}
-
-function filterBySearch(q) {
-    searchQuery = q.toLowerCase();
-    currentCategory = null;
+    // Collapse search if open
+    const wrap = document.getElementById('search-wrap');
+    if (wrap) wrap.classList.remove('search-open');
     renderCategories();
     renderGrid();
 }
@@ -86,14 +132,25 @@ function renderGrid() {
             });
         }
 
+        const priceRange = (() => {
+            if (!item.variants || item.variants.length === 0) return '';
+            const prices = item.variants.map(v => parseFloat(v.price));
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            return min === max
+                ? `BND $${min.toFixed(2)}`
+                : `BND $${min.toFixed(2)} – $${max.toFixed(2)}`;
+        })();
+
         return `
             <button onclick="handleItemClick(${item.id})" class="glass p-6 rounded-[32px] flex flex-col items-center justify-center text-center hover:scale-[1.02] active:scale-95 transition-all group h-52 relative ${isLow ? 'low-stock-warning' : ''}">
                 ${isLow ? '<div class="absolute top-4 right-4 text-amber-500 animate-pulse text-sm"><i class="fas fa-exclamation-circle"></i></div>' : ''}
                 <div class="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-all">
                     <i class="fas fa-mug-hot text-lg text-slate-500 group-hover:text-accent"></i>
                 </div>
-                <h3 class="font-black text-sm text-slate-100 leading-tight mb-1">${item.name}</h3>
-                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${item.category_name || 'General'}</p>
+                <h3 class="font-black text-sm leading-tight mb-1">${item.name}</h3>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">${item.category_name || 'General'}</p>
+                <p class="text-[10px] font-bold text-accent/80">${priceRange}</p>
             </button>
         `;
     }).join('');
@@ -130,7 +187,12 @@ function addToCart(v) {
     if (!v) return;
     const ex = cart.find(i => i.variant_id === v.id);
     if (ex) ex.quantity++;
-    else cart.push({ variant_id: v.id, name: `${currentItem.name} (${v.name})`, price: parseFloat(v.price), quantity: 1 });
+    else cart.push({
+        variant_id: v.id,
+        name: `${currentItem.name} (${v.name})`,
+        price: parseFloat(v.price),
+        quantity: 1
+    });
     renderCart();
 }
 
@@ -159,15 +221,15 @@ function renderCart() {
     c.innerHTML = cart.map(i => `
         <div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
             <div class="flex-1 min-w-0">
-                <h4 class="font-bold text-xs text-slate-100 truncate">${i.name}</h4>
+                <h4 class="font-bold text-xs truncate">${i.name}</h4>
                 <p class="text-[10px] text-slate-500 font-bold">BND $${i.price.toFixed(2)} each</p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button onclick="adjustQuantity(${i.variant_id}, -1)" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-slate-400 font-black text-lg flex items-center justify-center transition-all">−</button>
-                <span class="w-6 text-center font-black text-sm text-slate-100">${i.quantity}</span>
+                <span class="w-6 text-center font-black text-sm">${i.quantity}</span>
                 <button onclick="adjustQuantity(${i.variant_id}, 1)" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-accent/20 hover:text-accent text-slate-400 font-black text-lg flex items-center justify-center transition-all">+</button>
             </div>
-            <span class="font-black text-xs text-slate-100 w-16 text-right flex-shrink-0">BND $${(i.price * i.quantity).toFixed(2)}</span>
+            <span class="font-black text-xs w-16 text-right flex-shrink-0">BND $${(i.price * i.quantity).toFixed(2)}</span>
         </div>
     `).join('');
 
@@ -183,7 +245,7 @@ function renderCart() {
     }
 
     window._currentTotal = tot;
-    window._currentTax = taxAmt;
+    window._currentTax   = taxAmt;
 }
 
 // ============================================================
@@ -203,7 +265,6 @@ function showPaymentStep(n) {
         const el = document.getElementById(`pay-stage-${i}`);
         if (el) el.classList.toggle('hidden', i !== n);
     });
-
     if (n === 3) buildConfirmSummary();
 }
 
@@ -224,7 +285,6 @@ function numpadPress(char) {
     } else if (char === '.') {
         if (!tenderString.includes('.')) tenderString += char;
     } else {
-        // Prevent more than 2 decimal places
         const parts = tenderString.split('.');
         if (parts[1] && parts[1].length >= 2) return;
         tenderString += char;
@@ -245,7 +305,9 @@ function updateNumpadDisplay() {
     const confirmBtn = document.getElementById('proceed-to-confirm');
 
     changeEl.textContent = `BND $${Math.max(0, change).toFixed(2)}`;
-    changeEl.className = change >= 0 ? 'text-emerald-400 text-xl font-black' : 'text-red-400 text-xl font-black';
+    changeEl.className = change >= 0
+        ? 'text-emerald-400 text-xl font-black'
+        : 'text-red-400 text-xl font-black';
 
     if (confirmBtn) {
         confirmBtn.disabled = tenderVal < total;
@@ -256,13 +318,15 @@ function updateNumpadDisplay() {
 function buildConfirmSummary() {
     const summary = document.getElementById('confirm-summary');
     const payLine = document.getElementById('confirm-payment-line');
-    const total = window._currentTotal || 0;
-    const tax = window._currentTax || 0;
+    const total    = window._currentTotal || 0;
+    const tax      = window._currentTax   || 0;
     const subtotal = total - tax;
-    const tender = parseFloat(tenderString) || total;
-    const change = Math.max(0, tender - total);
+    const tender   = parseFloat(tenderString) || total;
+    const change   = Math.max(0, tender - total);
+    const typeLabel = orderType === 'dine_in' ? '🍽 Dine In' : '🥡 Takeaway';
 
     summary.innerHTML = `
+        <div class="flex justify-between"><span class="text-slate-500">Type</span><span class="font-bold">${typeLabel}</span></div>
         <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span class="font-bold">BND $${subtotal.toFixed(2)}</span></div>
         ${tax > 0 ? `<div class="flex justify-between"><span class="text-slate-500">Tax</span><span class="font-bold text-emerald-400">BND $${tax.toFixed(2)}</span></div>` : ''}
         <div class="flex justify-between text-lg font-black border-t border-white/5 pt-2 mt-2"><span>Total</span><span class="text-accent">BND $${total.toFixed(2)}</span></div>
@@ -276,14 +340,13 @@ function buildConfirmSummary() {
 }
 
 async function confirmAndSubmit() {
-    const total = window._currentTotal || 0;
-    const tax = window._currentTax || 0;
+    const total  = window._currentTotal || 0;
+    const tax    = window._currentTax   || 0;
     const tender = parseFloat(tenderString) || total;
     const change = Math.max(0, tender - total);
 
     if (!isOnline) {
-        // Queue for later sync
-        queueOrder(cart, total, tax, selectedPaymentMethod);
+        queueOrder(cart, total, tax, selectedPaymentMethod, orderType);
         closeModal('paymentModal');
         showQueuedReceipt(tender, change);
         clearCart();
@@ -294,7 +357,13 @@ async function confirmAndSubmit() {
         const res = await fetch('../api/?action=process_order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cart, total, tax, payment_type: selectedPaymentMethod })
+            body: JSON.stringify({
+                cart,
+                total,
+                tax,
+                payment_type: selectedPaymentMethod,
+                order_type: orderType
+            })
         });
         const d = await res.json();
         if (d.success) {
@@ -306,8 +375,7 @@ async function confirmAndSubmit() {
             alert(d.error || 'Order failed');
         }
     } catch (e) {
-        // Network error mid-submit — queue it
-        queueOrder(cart, total, tax, selectedPaymentMethod);
+        queueOrder(cart, total, tax, selectedPaymentMethod, orderType);
         closeModal('paymentModal');
         showQueuedReceipt(tender, change);
         clearCart();
@@ -320,20 +388,24 @@ async function confirmAndSubmit() {
 function showReceipt(orderId, tender, change) {
     populateReceipt(orderId, tender, change);
     openModal('receiptModal');
-    printReceipt();
+    setTimeout(printReceipt, 300); // slight delay so modal renders first
 }
 
 function showQueuedReceipt(tender, change) {
     populateReceipt('OFFLINE', tender, change);
     openModal('receiptModal');
+    setTimeout(printReceipt, 300); // auto-print for offline orders too
 }
 
 function populateReceipt(orderId, tender, change) {
     document.getElementById('rec-date').textContent = new Date().toLocaleString();
     document.getElementById('rec-order-id').textContent = `Order #${orderId}`;
 
+    const typeEl = document.getElementById('rec-order-type');
+    if (typeEl) typeEl.textContent = orderType === 'dine_in' ? 'Dine In' : 'Takeaway';
+
     const total = window._currentTotal || 0;
-    const tax = window._currentTax || 0;
+    const tax   = window._currentTax   || 0;
 
     document.getElementById('rec-items').innerHTML = cart.map(i =>
         `<div class="receipt-row flex justify-between"><span>${i.name} ×${i.quantity}</span><span>BND $${(i.price * i.quantity).toFixed(2)}</span></div>`
@@ -368,12 +440,20 @@ function printReceipt() {
 // ============================================================
 function clearCart() {
     cart = [];
+    orderType = 'dine_in';
     renderCart();
+    renderOrderType();
 }
 
 function showErrorMessage(msg) {
     const grid = document.getElementById('product-grid');
-    if (grid) grid.innerHTML = `<div class="col-span-full p-20 text-center glass rounded-[40px] border-red-500/20 bg-red-500/5"><i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4 block"></i><h3 class="text-xl font-black mb-2">System Error</h3><p class="text-slate-500 text-sm mb-6">${msg}</p><a href="../api/scripts/setup.php" class="bg-red-500 text-white px-8 py-3 rounded-xl font-bold inline-block">Go to Setup</a></div>`;
+    if (grid) grid.innerHTML = `
+        <div class="col-span-full p-20 text-center glass rounded-[40px] border-red-500/20 bg-red-500/5">
+            <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4 block"></i>
+            <h3 class="text-xl font-black mb-2">System Error</h3>
+            <p class="text-slate-500 text-sm mb-6">${msg}</p>
+            <a href="../api/scripts/setup.php" class="bg-red-500 text-white px-8 py-3 rounded-xl font-bold inline-block">Go to Setup</a>
+        </div>`;
 }
 
 document.addEventListener('DOMContentLoaded', initPOS);
