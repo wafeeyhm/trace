@@ -30,12 +30,17 @@
 - **Thermal Receipt Printing**: `window.print()` with 80mm thermal-optimized `@media print` CSS. Auto-triggers on checkout.
 - **High-Contrast Theme**: Gold-accent, near-black theme toggled from the sidebar. Persisted to localStorage.
 
-### 🔎 Phase Three — The Lens (Back Office & Analytics)
-- **Dynamic COGS Reporting**: Calculate profit margins in real-time based on the most recent supplier prices. No more manual paper math.
-- **Peak Hour Analytics**: Sales distribution chart shows busiest hours to optimize staffing.
-- **Revenue vs. Waste Tracking**: Comparative time-series data to track financial loss from inventory waste.
-- **Mobile-First Dashboard**: Fully responsive analytics grid with glassmorphism aesthetics and micro-animations.
-- **Responsive Sidebar**: Navigation automatically adapts for mobile/tablet screens.
+### 🗑️ Phase Four — Waste & Leakage (Operational Loss)
+- **Waste Mode Toggle**: Dedicated sidebar action in POS to switch into loss-logging mode.
+- **One-Tap Reasons**: Log losses for "Dropped", "Burned", or "Expired" with a zero-keyboard modal.
+- **Auto-Calculated Loss**: The system automatically calculates the cost of lost ingredients based on current supplier prices.
+- **Operational Loss Reporting**: Real-time financial visibility into leakage via the "Operational Loss" card in the Back Office dashboard.
+
+### 🧠 Phase Five — The Engine & Data Foundations (Core API)
+- **Multi-Tenant Architecture**: Support for tiered hierarchy: **Tenants** (Organizations) > **Locations** (Branches) > **Users**.
+- **Branch Isolation**: Every database query is cryptographically scoped to the user's specific location. Baristas in Branch A cannot view or modify data in Branch B.
+- **Secure Authentication Service**: Session-based login system with role-based access control (Admin, Manager, Barista).
+- **Scoped Recipe Engine**: Analytics, COGS, and Inventory deductions are all context-aware, ensuring financial precision across multiple branches.
 
 ---
 
@@ -44,52 +49,59 @@
 ```
 trace/
 ├── pos/                        # Trace Pulse (POS Client)
-│   ├── index.html              # Main POS — payment modal, offline banner
+│   ├── index.html              # Main POS — payment modal, waste mode, offline banner
 │   ├── kds.html                # Trace Kitchen (KDS) — standalone full-screen
 │   ├── sw.js                   # Service Worker — offline caching
 │   └── assets/
 │       ├── css/
-│       │   ├── style.css       # Themes incl. high-contrast + numpad styles
+│       │   ├── style.css       # Themes incl. high-contrast + waste mode active styles
 │       │   └── print.css       # Thermal receipt @media print (80mm)
 │       └── js/
 │           ├── core.js         # API fetching, isOnline flag, modal helpers
 │           ├── offline-queue.js # LocalStorage order queue + auto-sync
-│           ├── pos.js          # Payment flow, cart controls, grid rendering
+│           ├── pos.js          # Payment flow, cart controls, waste mode logic
 │           └── kds.js          # KDS polling, timers, status updates
 │
 ├── back-office/                # Trace Lens (Back Office Client)
 │   ├── index.html              # Full ingredient/menu/analytics management
-│   └── assets/js/back-office.js # CRUD, unit conversion, analytics
+│   └── assets/js/back-office.js # CRUD, unit conversion, analytics, multi-branch reporting
 │
 ├── api/                        # Trace API (PHP MVC Backend)
-│   ├── index.php               # Router — 16+ verified routes
+│   ├── index.php               # Router — Auth + Catalog + Inventory + Transaction
 │   └── src/
 │       ├── Models/
-│       │   ├── Inventory.php   # Unit conversion CRUD + restock logic
-│       │   ├── Transaction.php # Order processing + KDS status + analytics
-│       │   └── Menu.php        # Menu, variants, recipes
+│       │   ├── Inventory.php   # Scoped unit conversion CRUD + restock logic
+│       │   ├── Transaction.php # Scoped order processing + waste + analytics
+│       │   ├── Menu.php        # Scoped menu, variants, recipes
+│       │   ├── User.php        # Auth logic + context management
+│       │   └── Vendor.php      # Tenant-level supplier tracking
 │       └── Controllers/
+│           ├── AuthController.php # Login, Logout, Session handling
 │           ├── InventoryController.php
-│           └── TransactionController.php
+│           ├── TransactionController.php
+│           └── CatalogController.php
 │
 └── api/scripts/
-    ├── setup.php               # DB initialization + BND-ready seeding
-    └── update_units_db.php     # Idempotent migration script
+    └── setup.php               # DB initialization + Multi-tenant seeding
 ```
 
 ### API Endpoints
 | Action | Method | Description |
 |--------|--------|-------------|
-| `get_menu` | GET | Menu items with variants and recipes |
-| `get_inventory` | GET | Ingredients with stock, units, conversion factors |
-| `add_inventory_item` | POST | Create ingredient with unit conversion |
-| `update_inventory_item` | POST | Edit ingredient |
-| `delete_inventory_item` | POST | Delete (with recipe safety check) |
-| `restock_item` | POST | Add stock via purchase units (auto-converts) |
-| `process_order` | POST | Atomic checkout + stock deduction + KDS queue |
-| `get_pending_orders` | GET | KDS: all pending/preparing orders with items |
+| `login` | POST | Authenticate user and initialize session |
+| `logout` | POST | Clear user session |
+| `get_me` | GET | Retrieve current user context (Name, Role, Location) |
+| `get_menu` | GET | Scoped: Menu items with variants and recipes |
+| `get_inventory` | GET | Scoped: Ingredients with stock, units, conversion factors |
+| `add_inventory_item` | POST | Scoped: Create ingredient with unit conversion |
+| `update_inventory_item` | POST | Scoped: Edit ingredient |
+| `delete_inventory_item` | POST | Scoped: Delete (with recipe safety check) |
+| `restock_item` | POST | Scoped: Add stock via purchase units (auto-converts) |
+| `process_order` | POST | Scoped: Atomic checkout + stock deduction + KDS queue |
+| `add_waste` | POST | Scoped: Log operational loss and deduct inventory |
+| `get_pending_orders` | GET | KDS: all pending/preparing orders for current location |
 | `update_kds_status` | POST | KDS: pending → preparing → done |
-| `get_analytics` | GET | Revenue, COGS, Waste, Tax, Expenses, Net Profit, Trend, Peak Hours |
+| `get_analytics` | GET | Scoped: Revenue, COGS, Operational Loss, Tax, Expenses, Net Profit |
 
 ---
 
@@ -103,17 +115,10 @@ trace/
 2. **Configure**: Open `api/src/Config/env.php` and set your DB credentials.
 3. **Initialize**: Visit `http://localhost/trace/api/scripts/setup.php`
    - Click **Init** → creates all tables
-   - Click **Seed** → loads BND-priced cafe demo data
-4. **Launch**:
-   - POS: `http://localhost/trace/pos/`
-   - KDS (tablet): `http://[your-ip]/trace/pos/kds.html`
-   - Back Office: `http://localhost/trace/back-office/`
-
-### Existing Database Migration
-Run this once to apply schema updates without losing data:
-```
-http://localhost/trace/api/scripts/update_units_db.php
-```
+   - Click **Seed** → loads Multi-tenant demo data
+4. **Login**:
+   - Default User: `admin@trace.pro`
+   - Default Pass: `password123`
 
 ---
 
@@ -134,5 +139,9 @@ http://localhost/trace/api/scripts/update_units_db.php
 | High-contrast gold theme | ✅ |
 | Dynamic COGS & Real-time margins | ✅ |
 | Peak Hour sales distribution | ✅ |
-| Revenue vs. Waste charting | ✅ |
+| Operational Loss tracking (POS) | ✅ |
+| Revenue vs. Operational Loss chart | ✅ |
+| Multi-tenant hierarchy (Tenant/Location) | ✅ |
+| Branch Isolation (Scoped Queries) | ✅ |
+| Session-based Auth Service | ✅ |
 | Mobile-responsive back office | ✅ |
