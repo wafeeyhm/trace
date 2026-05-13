@@ -33,8 +33,7 @@
 </head>
 <body class="h-screen flex overflow-hidden">
 
-    <!-- Sidebar Navigation -->
-    <aside class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50">
+    <aside id="sidebar" class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50 transition-all duration-300 md:translate-x-0 -translate-x-full fixed md:relative h-full">
         <div class="text-accent text-2xl"><i class="fas fa-bolt"></i></div>
         <nav class="flex flex-col gap-6">
             <a href="../pos/index.html" class="nav-btn text-slate-500 hover:text-white" title="Register"><i class="fas fa-th-large text-xl"></i></a>
@@ -44,12 +43,18 @@
         </nav>
     </aside>
 
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 right-0 h-16 glass z-[60] flex items-center justify-between px-6 border-b border-white/5">
+        <div class="text-accent text-xl font-black"><i class="fas fa-bolt mr-2"></i>Trace</div>
+        <button onclick="toggleSidebar()" class="text-white text-xl"><i class="fas fa-bars"></i></button>
+    </div>
+
     <!-- Page: Back Office (Management) -->
-    <main id="backoffice-page" class="flex-1 p-12 overflow-y-auto bg-slate-950">
-        <header class="mb-12 flex justify-between items-end">
+    <main id="backoffice-page" class="flex-1 p-6 md:p-12 overflow-y-auto bg-slate-950 mt-16 md:mt-0">
+        <header class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
                 <h1 class="text-4xl font-black mb-4">Trace Lens</h1>
-                <div class="flex gap-8 text-xs font-black uppercase tracking-[0.2em]">
+                <div class="flex flex-wrap gap-4 md:gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
                     <button onclick="switchBackOffice('ingredients')" id="tab-ingredients" class="backoffice-tab active-tab pb-2">Ingredients</button>
                     <button onclick="switchBackOffice('menu')" id="tab-menu" class="backoffice-tab pb-2">Menu Setup</button>
                     <button onclick="switchBackOffice('analysis')" id="tab-analysis" class="backoffice-tab pb-2">Menu Analysis</button>
@@ -58,7 +63,7 @@
                     <button onclick="switchBackOffice('vendors')" id="tab-vendors" class="backoffice-tab pb-2">Vendors</button>
                 </div>
             </div>
-            <button id="add-btn" class="bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
+            <button id="add-btn" class="w-full md:w-auto bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
         </header>
 
         <div id="bo-ingredients" class="space-y-4">
@@ -98,28 +103,57 @@
     </main>
 
     <!-- Page: Analytics -->
-    <div id="analytics-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950">
-        <header class="mb-12 flex justify-between items-end">
+    <div id="analytics-page" class="hidden flex-1 p-6 md:p-12 overflow-y-auto bg-slate-950 mt-16 md:mt-0">
+        <header class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
                 <h1 class="text-4xl font-black mb-4">Performance</h1>
-                <div class="flex gap-8 text-xs font-black uppercase tracking-[0.2em]">
+                <div class="flex flex-wrap gap-4 md:gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
                     <button onclick="switchPerformance('sales')" id="tab-perf-sales" class="perf-tab active-tab pb-2">Sales Reports</button>
                     <button onclick="switchPerformance('taxes')" id="tab-perf-taxes" class="perf-tab pb-2">Tax Management</button>
                     <button onclick="switchPerformance('expenses')" id="tab-perf-expenses" class="perf-tab pb-2">Expense Tracking</button>
                     <button onclick="switchPerformance('forecast')" id="tab-perf-forecast" class="perf-tab pb-2">Profit Forecast</button>
                 </div>
             </div>
-            <button id="add-perf-btn" class="hidden bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
+            <div class="flex gap-3 w-full md:w-auto">
+                <select onchange="loadAnalytics(this.value)" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-100">
+                    <option value="day">Today</option>
+                    <option value="month" selected>This Month</option>
+                    <option value="year">This Year</option>
+                </select>
+                <button id="add-perf-btn" class="hidden bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
+            </div>
         </header>
 
         <div id="perf-sales" class="space-y-8">
-            <div class="grid grid-cols-4 gap-8 mb-8">
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Revenue</p><h2 id="ana-rev" class="text-4xl font-black text-white">BND $0.00</h2></div>
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax</p><h2 id="ana-tax" class="text-4xl font-black text-emerald-400">BND $0.00</h2></div>
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Expenses</p><h2 id="ana-expenses" class="text-4xl font-black text-red-400">BND $0.00</h2></div>
-                <div class="glass p-8 rounded-3xl border border-accent/30"><p class="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Net Profit</p><h2 id="ana-net" class="text-4xl font-black text-accent">BND $0.00</h2></div>
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 md:gap-6 mb-8">
+                <div class="glass p-6 rounded-3xl col-span-2"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Gross Revenue</p><h2 id="ana-rev" class="text-3xl font-black text-white">BND $0.00</h2></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">COGS</p><h2 id="ana-cogs" class="text-2xl font-black text-yellow-400">BND $0.00</h2></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Waste</p><h2 id="ana-waste" class="text-2xl font-black text-orange-400">BND $0.00</h2></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax</p><h2 id="ana-tax" class="text-2xl font-black text-emerald-400">BND $0.00</h2></div>
+                <div class="glass p-6 rounded-3xl"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Expenses</p><h2 id="ana-expenses" class="text-2xl font-black text-red-400">BND $0.00</h2></div>
+                <div class="glass p-6 rounded-3xl border border-accent/30 col-span-2 lg:col-span-1"><p class="text-[9px] font-bold text-accent uppercase tracking-widest mb-2">Net Profit</p><h2 id="ana-net" class="text-3xl font-black text-accent">BND $0.00</h2></div>
             </div>
-            <div class="glass p-12 rounded-[40px]"><canvas id="mainChart" height="100"></canvas></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 glass p-6 md:p-12 rounded-[40px]">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-xs font-black uppercase tracking-widest">Revenue vs. Waste</h3>
+                        <div class="flex gap-4">
+                            <span class="flex items-center gap-2 text-[10px] font-bold text-slate-500"><div class="w-3 h-3 rounded-full bg-accent"></div> Revenue</span>
+                            <span class="flex items-center gap-2 text-[10px] font-bold text-slate-500"><div class="w-3 h-3 rounded-full bg-orange-500"></div> Waste</span>
+                        </div>
+                    </div>
+                    <div class="h-[300px] w-full">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass p-6 md:p-12 rounded-[40px]">
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-8">Peak Hours (Sales)</h3>
+                    <div class="h-[300px] w-full">
+                        <canvas id="peakChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="perf-taxes" class="hidden space-y-4">

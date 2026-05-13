@@ -3,6 +3,7 @@ let activeBackOfficeTab = 'ingredients';
 let activePerformanceTab = 'sales';
 let analyticsData = {};
 let mainChart = null;
+let peakChart = null;
 let activeVariantId = null;
 
 async function initLens() {
@@ -21,6 +22,11 @@ function switchTab(p) {
     document.getElementById('analytics-page').classList.toggle('hidden', p !== 'analytics');
     document.getElementById('settings-page').classList.toggle('hidden', p !== 'settings');
     
+    // Close sidebar on mobile after selection
+    if (window.innerWidth < 768) {
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+    }
+
     document.querySelectorAll('.nav-btn').forEach(btn => {
         const isTarget = (p === 'backoffice' && btn.title === 'Management') || 
                          (p === 'analytics' && btn.title === 'Analytics') ||
@@ -31,6 +37,11 @@ function switchTab(p) {
     
     if (p === 'backoffice') renderBackOffice();
     if (p === 'analytics') renderPerformance();
+}
+
+function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    sb.classList.toggle('-translate-x-full');
 }
 
 function switchBackOffice(tab) {
@@ -177,21 +188,128 @@ async function loadAnalytics(range) {
         document.getElementById('ana-tax').textContent = `BND $${d.tax_collected.toFixed(2)}`;
         document.getElementById('ana-expenses').textContent = `BND $${d.expenses.toFixed(2)}`;
         document.getElementById('ana-net').textContent = `BND $${d.net_profit.toFixed(2)}`;
-
-        const canvas = document.getElementById('mainChart');
-        if (!canvas) return;
-        if (mainChart) mainChart.destroy();
         
-        const accent = getComputedStyle(document.body).getPropertyValue('--color-accent').trim();
-        mainChart = new Chart(canvas.getContext('2d'), { 
-            type: 'line', 
-            data: { 
-                labels: (d.trend || []).map(x => x.day), 
-                datasets: [{ label: 'Revenue', data: (d.trend || []).map(x => x.rev), borderColor: `rgb(${accent})`, backgroundColor: `rgba(${accent.split(' ').join(',')}, 0.1)`, fill: true, tension: 0.4 }] 
-            }, 
-            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } }, x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } } } } 
-        });
+        // New metrics
+        const cogsEl = document.getElementById('ana-cogs');
+        if (cogsEl) cogsEl.textContent = `BND $${(d.cogs || 0).toFixed(2)}`;
+        const wasteEl = document.getElementById('ana-waste');
+        if (wasteEl) wasteEl.textContent = `BND $${(d.waste || 0).toFixed(2)}`;
+
+        renderMainChart(d);
+        renderPeakChart(d.peak_hours || []);
     } catch (e) { console.error("Analytics error", e); }
+}
+
+function renderMainChart(d) {
+    const canvas = document.getElementById('mainChart');
+    if (!canvas) return;
+    if (mainChart) mainChart.destroy();
+    
+    const accent = getComputedStyle(document.body).getPropertyValue('--color-accent').trim();
+    mainChart = new Chart(canvas.getContext('2d'), { 
+        type: 'line', 
+        data: { 
+            labels: (d.trend || []).map(x => x.day), 
+            datasets: [
+                { 
+                    label: 'Revenue', 
+                    data: (d.trend || []).map(x => x.rev), 
+                    borderColor: `rgb(${accent})`, 
+                    backgroundColor: `rgba(${accent.split(' ').join(',')}, 0.1)`, 
+                    fill: true, 
+                    tension: 0.4 
+                },
+                { 
+                    label: 'Waste', 
+                    data: (d.trend || []).map(x => x.waste), 
+                    borderColor: '#f97316', 
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)', 
+                    fill: true, 
+                    tension: 0.4 
+                }
+            ] 
+        }, 
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: BND $${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            }, 
+            scales: { 
+                y: { 
+                    title: { display: true, text: 'Amount (BND)', color: 'rgba(255,255,255,0.5)', font: { size: 10, weight: 'bold' } },
+                    grid: { color: 'rgba(255,255,255,0.05)' }, 
+                    ticks: { 
+                        color: 'rgba(255,255,255,0.5)',
+                        callback: function(value) { return '$' + value; }
+                    } 
+                }, 
+                x: { 
+                    title: { display: true, text: 'Date', color: 'rgba(255,255,255,0.5)', font: { size: 10, weight: 'bold' } },
+                    grid: { display: false }, 
+                    ticks: { color: 'rgba(255,255,255,0.5)' } 
+                } 
+            } 
+        } 
+    });
+}
+
+function renderPeakChart(data) {
+    const canvas = document.getElementById('peakChart');
+    if (!canvas) return;
+    if (peakChart) peakChart.destroy();
+
+    const hours = Array.from({length: 24}, (_, i) => i);
+    const hourlyData = hours.map(h => {
+        const entry = data.find(d => d.hour == h);
+        return entry ? parseFloat(entry.total) : 0;
+    });
+
+    const accent = getComputedStyle(document.body).getPropertyValue('--color-accent').trim();
+    peakChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: hours.map(h => `${h}:00`),
+            datasets: [{
+                data: hourlyData,
+                backgroundColor: `rgb(${accent})`,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Sales: BND $${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { 
+                    title: { display: true, text: 'Sales (BND)', color: 'rgba(255,255,255,0.5)', font: { size: 10, weight: 'bold' } },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 8 } }
+                },
+                x: { 
+                    title: { display: true, text: 'Hour of Day', color: 'rgba(255,255,255,0.5)', font: { size: 10, weight: 'bold' } },
+                    grid: { display: false }, 
+                    ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 8 } } 
+                }
+            }
+        }
+    });
 }
 
 function updateForecast() {

@@ -81,14 +81,72 @@ class Transaction {
         $revenue = $this->db->query("SELECT SUM(total_amount) as val FROM orders WHERE 1=1 $filter")->fetch()['val'] ?? 0;
         $tax_collected = $this->db->query("SELECT SUM(tax_amount) as val FROM orders WHERE 1=1 $filter")->fetch()['val'] ?? 0;
         $expenses = $this->db->query("SELECT SUM(amount) as val FROM expenses WHERE 1=1 $expense_filter")->fetch()['val'] ?? 0;
-        $trend = $this->db->query("SELECT DATE(created_at) as day, SUM(total_amount) as rev FROM orders WHERE 1=1 $filter GROUP BY DATE(created_at) ORDER BY day ASC")->fetchAll();
+        
+        // Dynamic COGS Calculation (Real-time based on current supplier prices)
+        $cogs = $this->db->query("
+            SELECT SUM(oi.quantity * (
+                SELECT IFNULL(SUM(r.quantity * i.cost_per_unit), 0)
+                FROM menu_recipes r
+                JOIN inventory_items i ON r.inventory_item_id = i.id
+                WHERE r.menu_variant_id = oi.menu_variant_id
+            )) as val
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE 1=1 $filter
+        ")->fetch()['val'] ?? 0;
+
+        // Waste Calculation
+        $waste = $this->db->query("
+            SELECT SUM(ABS(l.change_amount) * i.cost_per_unit) as val
+            FROM inventory_logs l
+            JOIN inventory_items i ON l.inventory_item_id = i.id
+            WHERE l.type = 'waste' $filter
+        ")->fetch()['val'] ?? 0;
+
+        // Peak Hours (24h distribution)
+        $peak_hours = $this->db->query("
+            SELECT HOUR(created_at) as hour, SUM(total_amount) as total 
+            FROM orders 
+            WHERE 1=1 $filter 
+            GROUP BY HOUR(created_at) 
+            ORDER BY hour ASC
+        ")->fetchAll();
+
+        // Time-series Trend (Revenue vs Waste)
+        $trend_raw = $this->db->query("
+            SELECT DATE(created_at) as day, SUM(total_amount) as rev 
+            FROM orders 
+            WHERE 1=1 $filter 
+            GROUP BY DATE(created_at) 
+            ORDER BY day ASC
+        ")->fetchAll();
+
+        $trend = [];
+        foreach ($trend_raw as $t) {
+            $day = $t['day'];
+            $waste_on_day = $this->db->query("
+                SELECT SUM(ABS(l.change_amount) * i.cost_per_unit) 
+                FROM inventory_logs l
+                JOIN inventory_items i ON l.inventory_item_id = i.id
+                WHERE l.type = 'waste' AND DATE(l.created_at) = '$day'
+            ")->fetchColumn() ?: 0;
+
+            $trend[] = [
+                'day' => $day,
+                'rev' => (float)$t['rev'],
+                'waste' => (float)$waste_on_day
+            ];
+        }
         
         return [
             'revenue' => (float)$revenue, 
             'tax_collected' => (float)$tax_collected,
             'expenses' => (float)$expenses,
-            'net_profit' => (float)($revenue - $expenses),
-            'trend' => $trend
+            'cogs' => (float)$cogs,
+            'waste' => (float)$waste,
+            'net_profit' => (float)($revenue - $expenses - $cogs),
+            'trend' => $trend,
+            'peak_hours' => $peak_hours
         ];
     }
 }
