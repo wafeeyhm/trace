@@ -17,18 +17,48 @@ if ($action) {
         $conn->select_db($dbName);
 
         $tables = [
-            "vendors" => "CREATE TABLE IF NOT EXISTS vendors (
+            "tenants" => "CREATE TABLE IF NOT EXISTS tenants (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
-                contact_info VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            "locations" => "CREATE TABLE IF NOT EXISTS locations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT,
+                name VARCHAR(255) NOT NULL,
+                address VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+            )",
+            "users" => "CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT,
+                location_id INT,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                role ENUM('admin', 'manager', 'barista') DEFAULT 'barista',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
+            )",
+            "vendors" => "CREATE TABLE IF NOT EXISTS vendors (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tenant_id INT,
+                name VARCHAR(255) NOT NULL,
+                contact_info VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
             )",
             "inventory_categories" => "CREATE TABLE IF NOT EXISTS inventory_categories (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL UNIQUE
+                location_id INT,
+                name VARCHAR(100) NOT NULL,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
             )",
             "inventory_items" => "CREATE TABLE IF NOT EXISTS inventory_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                location_id INT,
                 category_id INT,
                 name VARCHAR(255) NOT NULL,
                 purchase_unit VARCHAR(20) DEFAULT 'unit',
@@ -37,19 +67,24 @@ if ($action) {
                 cost_per_unit DECIMAL(10, 4) DEFAULT 0.0000,
                 stock_level DECIMAL(10, 2) DEFAULT 0.00,
                 min_stock DECIMAL(10, 2) DEFAULT 5.00,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
                 FOREIGN KEY (category_id) REFERENCES inventory_categories(id) ON DELETE SET NULL
             )",
             "menu_categories" => "CREATE TABLE IF NOT EXISTS menu_categories (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL UNIQUE
+                location_id INT,
+                name VARCHAR(100) NOT NULL,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
             )",
             "menu_items" => "CREATE TABLE IF NOT EXISTS menu_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                location_id INT,
                 category_id INT,
                 vendor_id INT DEFAULT NULL,
                 name VARCHAR(255) NOT NULL,
                 image_url VARCHAR(255),
                 is_active BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
                 FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
                 FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL
             )",
@@ -70,12 +105,14 @@ if ($action) {
             )",
             "orders" => "CREATE TABLE IF NOT EXISTS orders (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                location_id INT,
                 total_amount DECIMAL(10, 2) NOT NULL,
                 tax_amount DECIMAL(10, 2) DEFAULT 0.00,
                 discount_amount DECIMAL(10, 2) DEFAULT 0.00,
                 payment_type ENUM('cash', 'card', 'ewallet') DEFAULT 'cash',
                 kds_status ENUM('pending', 'preparing', 'done') DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
             )",
             "order_items" => "CREATE TABLE IF NOT EXISTS order_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -97,16 +134,20 @@ if ($action) {
             )",
             "expenses" => "CREATE TABLE IF NOT EXISTS expenses (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                location_id INT,
                 description VARCHAR(255) NOT NULL,
                 amount DECIMAL(10, 2) NOT NULL,
                 expense_date DATE NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
             )",
             "taxes" => "CREATE TABLE IF NOT EXISTS taxes (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                location_id INT,
                 name VARCHAR(100) NOT NULL,
                 rate DECIMAL(5, 2) NOT NULL,
-                is_active BOOLEAN DEFAULT TRUE
+                is_active BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
             )"
         ];
 
@@ -122,19 +163,29 @@ if ($action) {
         while($row = $res->fetch_array()) $conn->query("TRUNCATE TABLE " . $row[0]);
         $conn->query("SET FOREIGN_KEY_CHECKS = 1;");
 
+        // Seed Tenant & Location
+        $conn->query("INSERT INTO tenants (name) VALUES ('Trace Group')");
+        $tenantId = $conn->insert_id;
+        $conn->query("INSERT INTO locations (tenant_id, name, address) VALUES ($tenantId, 'Main Street Cafe', '123 Coffee Lane')");
+        $locId = $conn->insert_id;
+
+        // Seed User (Password: password123)
+        $passHash = password_hash('password123', PASSWORD_DEFAULT);
+        $conn->query("INSERT INTO users (tenant_id, location_id, name, email, password_hash, role) VALUES ($tenantId, $locId, 'Admin User', 'admin@trace.pro', '$passHash', 'admin')");
+
         // Seed Categories
-        $conn->query("INSERT INTO inventory_categories (name) VALUES ('Raw Materials'), ('Dairy'), ('Packaging')");
-        $conn->query("INSERT INTO menu_categories (name) VALUES ('Coffee'), ('Bakery'), ('Cold Drinks')");
+        $conn->query("INSERT INTO inventory_categories (location_id, name) VALUES ($locId, 'Raw Materials'), ($locId, 'Dairy'), ($locId, 'Packaging')");
+        $conn->query("INSERT INTO menu_categories (location_id, name) VALUES ($locId, 'Coffee'), ($locId, 'Bakery'), ($locId, 'Cold Drinks')");
 
-        // Seed Inventory (1kg Espresso Beans = 1000g, 1L Milk = 1000ml)
-        $conn->query("INSERT INTO inventory_items (category_id, name, purchase_unit, usage_unit, conversion_factor, cost_per_unit, stock_level, min_stock) VALUES 
-            (1, 'Espresso Beans', 'kg', 'g', 1000, 0.025, 20000, 1000),
-            (2, 'Whole Milk', 'L', 'ml', 1000, 0.0018, 50000, 5000),
-            (1, 'Vanilla Syrup', 'bottle', 'shot', 25, 0.48, 250, 50),
-            (3, 'Paper Cup 12oz', 'sleeve', 'pcs', 50, 0.15, 500, 100)");
+        // Seed Inventory
+        $conn->query("INSERT INTO inventory_items (location_id, category_id, name, purchase_unit, usage_unit, conversion_factor, cost_per_unit, stock_level, min_stock) VALUES 
+            ($locId, 1, 'Espresso Beans', 'kg', 'g', 1000, 0.025, 20000, 1000),
+            ($locId, 2, 'Whole Milk', 'L', 'ml', 1000, 0.0018, 50000, 5000),
+            ($locId, 1, 'Vanilla Syrup', 'bottle', 'shot', 25, 0.48, 250, 50),
+            ($locId, 3, 'Paper Cup 12oz', 'sleeve', 'pcs', 50, 0.15, 500, 100)");
 
-        // Seed Menu (BND Prices)
-        $conn->query("INSERT INTO menu_items (category_id, name) VALUES (1, 'Caffe Latte'), (1, 'Cappuccino'), (2, 'Butter Croissant')");
+        // Seed Menu
+        $conn->query("INSERT INTO menu_items (location_id, category_id, name) VALUES ($locId, 1, 'Caffe Latte'), ($locId, 1, 'Cappuccino'), ($locId, 2, 'Butter Croissant')");
         
         // Seed Variants
         $conn->query("INSERT INTO menu_variants (menu_item_id, name, price) VALUES 
@@ -142,12 +193,15 @@ if ($action) {
             (2, 'Standard', 4.80),
             (3, 'Classic', 3.50)");
 
-        // Seed Recipes (using usage units)
+        // Seed Recipes
         $conn->query("INSERT INTO menu_recipes (menu_variant_id, inventory_item_id, quantity) VALUES 
             (1, 1, 18), (1, 2, 250), (1, 4, 1),
             (2, 1, 24), (2, 2, 350), (2, 4, 1)");
 
-        $results[] = ['task' => 'Trace Phase One Seeding', 'status' => 'success', 'msg' => 'BND Data Loaded'];
+        // Seed Taxes
+        $conn->query("INSERT INTO taxes (location_id, name, rate) VALUES ($locId, 'Standard Service Charge', 10.00)");
+
+        $results[] = ['task' => 'Trace Phase 5 Seeding', 'status' => 'success', 'msg' => 'Multi-tenant Data Loaded'];
     }
 
     if ($action === 'reset') {

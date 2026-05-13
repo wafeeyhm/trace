@@ -220,7 +220,7 @@ function renderMainChart(d) {
                     tension: 0.4 
                 },
                 { 
-                    label: 'Waste', 
+                    label: 'Operational Loss', 
                     data: (d.trend || []).map(x => x.waste), 
                     borderColor: '#f97316', 
                     backgroundColor: 'rgba(249, 115, 22, 0.1)', 

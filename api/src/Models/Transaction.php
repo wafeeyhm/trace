@@ -9,21 +9,23 @@ class Transaction {
         $this->db = Database::getConnection();
     }
 
-    public function processOrder($data) {
+    public function processOrder($locationId, $data) {
         $cart = $data['cart']; 
         $total = $data['total'];
         $this->db->beginTransaction();
         try {
-            $stmt = $this->db->prepare("INSERT INTO orders (total_amount, tax_amount, discount_amount, payment_type) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$total, $data['tax'] ?? 0, $data['discount'] ?? 0, $data['payment_type'] ?? 'cash']);
+            $stmt = $this->db->prepare("INSERT INTO orders (location_id, total_amount, tax_amount, discount_amount, payment_type) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$locationId, $total, $data['tax'] ?? 0, $data['discount'] ?? 0, $data['payment_type'] ?? 'cash']);
             $orderId = $this->db->lastInsertId();
             foreach ($cart as $item) {
                 $this->db->prepare("INSERT INTO order_items (order_id, menu_variant_id, quantity, unit_price) VALUES (?, ?, ?, ?)")->execute([$orderId, $item['variant_id'], $item['quantity'], $item['price']]);
+                
                 $stmtRec = $this->db->prepare("SELECT inventory_item_id, quantity FROM menu_recipes WHERE menu_variant_id = ?");
                 $stmtRec->execute([$item['variant_id']]);
                 foreach ($stmtRec->fetchAll() as $rec) {
                     $deduction = $rec['quantity'] * $item['quantity'];
-                    $this->db->prepare("UPDATE inventory_items SET stock_level = stock_level - ? WHERE id = ?")->execute([$deduction, $rec['inventory_item_id']]);
+                    // Ensure we only update inventory for this location
+                    $this->db->prepare("UPDATE inventory_items SET stock_level = stock_level - ? WHERE id = ? AND location_id = ?")->execute([$deduction, $rec['inventory_item_id'], $locationId]);
                     $this->db->prepare("INSERT INTO inventory_logs (inventory_item_id, type, change_amount, reason) VALUES (?, 'sale_deduction', ?, ?)")->execute([$rec['inventory_item_id'], -$deduction, "Order #$orderId"]);
                 }
             }
@@ -35,13 +37,37 @@ class Transaction {
         }
     }
 
-    public function getPendingOrders() {
-        $orders = $this->db->query(
+    public function processWaste($locationId, $data) {
+        $variantId = $data['variant_id'];
+        $quantity = $data['quantity'] ?? 1;
+        $reason = $data['reason'] ?? 'Unspecified';
+        
+        $this->db->beginTransaction();
+        try {
+            $stmtRec = $this->db->prepare("SELECT inventory_item_id, quantity FROM menu_recipes WHERE menu_variant_id = ?");
+            $stmtRec->execute([$variantId]);
+            foreach ($stmtRec->fetchAll() as $rec) {
+                $deduction = $rec['quantity'] * $quantity;
+                $this->db->prepare("UPDATE inventory_items SET stock_level = stock_level - ? WHERE id = ? AND location_id = ?")->execute([$deduction, $rec['inventory_item_id'], $locationId]);
+                $this->db->prepare("INSERT INTO inventory_logs (inventory_item_id, type, change_amount, reason) VALUES (?, 'waste', ?, ?)")->execute([$rec['inventory_item_id'], -$deduction, "Waste: $reason"]);
+            }
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    public function getPendingOrders($locationId) {
+        $stmt = $this->db->prepare(
             "SELECT o.id, o.kds_status, o.created_at, o.payment_type
              FROM orders o
-             WHERE o.kds_status IN ('pending', 'preparing')
+             WHERE o.location_id = ? AND o.kds_status IN ('pending', 'preparing')
              ORDER BY o.created_at ASC"
-        )->fetchAll();
+        );
+        $stmt->execute([$locationId]);
+        $orders = $stmt->fetchAll();
 
         foreach ($orders as &$order) {
             $stmt = $this->db->prepare(
@@ -57,16 +83,17 @@ class Transaction {
         return $orders;
     }
 
-    public function updateKdsStatus($orderId, $status) {
+    public function updateKdsStatus($locationId, $orderId, $status) {
         $allowed = ['pending', 'preparing', 'done'];
         if (!in_array($status, $allowed)) {
             throw new \Exception("Invalid KDS status: $status");
         }
-        $stmt = $this->db->prepare("UPDATE orders SET kds_status = ? WHERE id = ?");
-        return $stmt->execute([$status, $orderId]);
+        // Verify order belongs to location
+        $stmt = $this->db->prepare("UPDATE orders SET kds_status = ? WHERE id = ? AND location_id = ?");
+        return $stmt->execute([$status, $orderId, $locationId]);
     }
 
-    public function getAnalytics($range) {
+    public function getAnalytics($locationId, $range) {
         $filter = "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)";
         $expense_filter = "AND expense_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)";
         if ($range === 'day') {
@@ -78,58 +105,76 @@ class Transaction {
             $expense_filter = "AND expense_date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
         }
         
-        $revenue = $this->db->query("SELECT SUM(total_amount) as val FROM orders WHERE 1=1 $filter")->fetch()['val'] ?? 0;
-        $tax_collected = $this->db->query("SELECT SUM(tax_amount) as val FROM orders WHERE 1=1 $filter")->fetch()['val'] ?? 0;
-        $expenses = $this->db->query("SELECT SUM(amount) as val FROM expenses WHERE 1=1 $expense_filter")->fetch()['val'] ?? 0;
+        $stmtRev = $this->db->prepare("SELECT SUM(total_amount) as val FROM orders WHERE location_id = ? $filter");
+        $stmtRev->execute([$locationId]);
+        $revenue = $stmtRev->fetch()['val'] ?? 0;
+
+        $stmtTax = $this->db->prepare("SELECT SUM(tax_amount) as val FROM orders WHERE location_id = ? $filter");
+        $stmtTax->execute([$locationId]);
+        $tax_collected = $stmtTax->fetch()['val'] ?? 0;
+
+        $stmtExp = $this->db->prepare("SELECT SUM(amount) as val FROM expenses WHERE location_id = ? $expense_filter");
+        $stmtExp->execute([$locationId]);
+        $expenses = $stmtExp->fetch()['val'] ?? 0;
         
-        // Dynamic COGS Calculation (Real-time based on current supplier prices)
-        $cogs = $this->db->query("
+        // Dynamic COGS Calculation (Scoped to location)
+        $stmtCogs = $this->db->prepare("
             SELECT SUM(oi.quantity * (
                 SELECT IFNULL(SUM(r.quantity * i.cost_per_unit), 0)
                 FROM menu_recipes r
                 JOIN inventory_items i ON r.inventory_item_id = i.id
-                WHERE r.menu_variant_id = oi.menu_variant_id
+                WHERE r.menu_variant_id = oi.menu_variant_id AND i.location_id = ?
             )) as val
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.id
-            WHERE 1=1 $filter
-        ")->fetch()['val'] ?? 0;
+            WHERE o.location_id = ? $filter
+        ");
+        $stmtCogs->execute([$locationId, $locationId]);
+        $cogs = $stmtCogs->fetch()['val'] ?? 0;
 
-        // Waste Calculation
-        $waste = $this->db->query("
+        // Waste Calculation (Scoped to location)
+        $stmtWaste = $this->db->prepare("
             SELECT SUM(ABS(l.change_amount) * i.cost_per_unit) as val
             FROM inventory_logs l
             JOIN inventory_items i ON l.inventory_item_id = i.id
-            WHERE l.type = 'waste' $filter
-        ")->fetch()['val'] ?? 0;
+            WHERE i.location_id = ? AND l.type = 'waste' $filter
+        ");
+        $stmtWaste->execute([$locationId]);
+        $waste = $stmtWaste->fetch()['val'] ?? 0;
 
-        // Peak Hours (24h distribution)
-        $peak_hours = $this->db->query("
+        // Peak Hours (Scoped to location)
+        $stmtPeak = $this->db->prepare("
             SELECT HOUR(created_at) as hour, SUM(total_amount) as total 
             FROM orders 
-            WHERE 1=1 $filter 
+            WHERE location_id = ? $filter 
             GROUP BY HOUR(created_at) 
             ORDER BY hour ASC
-        ")->fetchAll();
+        ");
+        $stmtPeak->execute([$locationId]);
+        $peak_hours = $stmtPeak->fetchAll();
 
-        // Time-series Trend (Revenue vs Waste)
-        $trend_raw = $this->db->query("
+        // Time-series Trend (Scoped to location)
+        $stmtTrend = $this->db->prepare("
             SELECT DATE(created_at) as day, SUM(total_amount) as rev 
             FROM orders 
-            WHERE 1=1 $filter 
+            WHERE location_id = ? $filter 
             GROUP BY DATE(created_at) 
             ORDER BY day ASC
-        ")->fetchAll();
+        ");
+        $stmtTrend->execute([$locationId]);
+        $trend_raw = $stmtTrend->fetchAll();
 
         $trend = [];
         foreach ($trend_raw as $t) {
             $day = $t['day'];
-            $waste_on_day = $this->db->query("
+            $stmtWDay = $this->db->prepare("
                 SELECT SUM(ABS(l.change_amount) * i.cost_per_unit) 
                 FROM inventory_logs l
                 JOIN inventory_items i ON l.inventory_item_id = i.id
-                WHERE l.type = 'waste' AND DATE(l.created_at) = '$day'
-            ")->fetchColumn() ?: 0;
+                WHERE i.location_id = ? AND l.type = 'waste' AND DATE(l.created_at) = ?
+            ");
+            $stmtWDay->execute([$locationId, $day]);
+            $waste_on_day = $stmtWDay->fetchColumn() ?: 0;
 
             $trend[] = [
                 'day' => $day,

@@ -8,6 +8,8 @@ let orderType = 'dine_in'; // 'dine_in' | 'takeaway'
 // Payment state
 let selectedPaymentMethod = 'cash';
 let tenderString = '';
+let isWasteMode = false;
+let wasteVariant = null;
 
 // ============================================================
 // INIT
@@ -44,6 +46,22 @@ function renderOrderType() {
             btn.classList.add('ot-inactive');
         }
     });
+}
+
+function toggleWasteMode() {
+    isWasteMode = !isWasteMode;
+    const btn = document.getElementById('waste-mode-btn');
+    const grid = document.getElementById('product-grid');
+    
+    if (isWasteMode) {
+        btn.classList.add('text-orange-500');
+        btn.classList.remove('text-slate-500');
+        if (grid) grid.classList.add('waste-mode-active');
+    } else {
+        btn.classList.remove('text-orange-500');
+        btn.classList.add('text-slate-500');
+        if (grid) grid.classList.remove('waste-mode-active');
+    }
 }
 
 // ============================================================
@@ -162,6 +180,7 @@ function renderGrid() {
 function handleItemClick(itemId) {
     currentItem = menu.find(i => i.id === itemId);
     if (!currentItem) return;
+    
     if (currentItem.variants && currentItem.variants.length > 1) {
         const list = document.getElementById('variant-list');
         document.getElementById('var-item-name').textContent = currentItem.name;
@@ -173,14 +192,54 @@ function handleItemClick(itemId) {
         `).join('');
         openModal('variantModal');
     } else if (currentItem.variants && currentItem.variants[0]) {
-        addToCart(currentItem.variants[0]);
+        if (isWasteMode) openWasteModal(currentItem.variants[0]);
+        else addToCart(currentItem.variants[0]);
     }
 }
 
 function addToCartById(vId) {
     const v = currentItem.variants.find(v => v.id === vId);
-    if (v) addToCart(v);
-    closeModal('variantModal');
+    if (!v) return;
+    
+    if (isWasteMode) {
+        closeModal('variantModal');
+        openWasteModal(v);
+    } else {
+        addToCart(v);
+        closeModal('variantModal');
+    }
+}
+
+function openWasteModal(v) {
+    wasteVariant = v;
+    document.getElementById('waste-item-name').textContent = `${currentItem.name} (${v.name})`;
+    openModal('wasteModal');
+}
+
+async function submitWaste(reason) {
+    if (!wasteVariant) return;
+    
+    try {
+        const res = await fetch('../api/?action=add_waste', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                variant_id: wasteVariant.id,
+                quantity: 1,
+                reason: reason
+            })
+        });
+        const d = await res.json();
+        if (d.success) {
+            closeModal('wasteModal');
+            toggleWasteMode(); // Auto-exit waste mode
+            initPOS(); // Refresh inventory levels (low stock warnings)
+        } else {
+            alert(d.error || 'Waste logging failed');
+        }
+    } catch (e) {
+        alert('Offline waste logging not yet implemented');
+    }
 }
 
 function addToCart(v) {

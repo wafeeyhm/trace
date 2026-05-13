@@ -280,3 +280,17 @@ body {
 }
 .numpad-btn:hover  { background: rgba(var(--color-accent), 0.2); border-color: rgba(var(--color-accent), 0.3); }
 .numpad-btn:active { transform: scale(0.93); background: rgba(var(--color-accent), 0.35); }
+ 
+/* ===========================
+   WASTE MODE
+   =========================== */
+.waste-mode-active {
+    background: rgba(249, 115, 22, 0.05) !important;
+}
+.waste-mode-active button.glass {
+    border-color: rgba(249, 115, 22, 0.3) !important;
+}
+.waste-mode-active button.glass:hover {
+    background: rgba(249, 115, 22, 0.1) !important;
+    border-color: rgba(249, 115, 22, 0.5) !important;
+}

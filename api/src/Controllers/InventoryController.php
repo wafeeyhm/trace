@@ -6,21 +6,22 @@ class InventoryController extends BaseController {
     private $model;
 
     public function __construct() {
+        $this->checkAuth();
         $this->model = new Inventory();
     }
 
     public function list() {
-        $this->jsonResponse($this->model->getAll());
+        $this->jsonResponse($this->model->getAll($this->currentLocationId));
     }
 
     public function listCategories() {
-        $this->jsonResponse($this->model->getCategories());
+        $this->jsonResponse($this->model->getCategories($this->currentLocationId));
     }
 
     public function addCategory() {
         if ($this->getRequestMethod() === 'POST') {
             $data = $this->getPostData();
-            $id = $this->model->addCategory($data['name']);
+            $id = $this->model->addCategory($this->currentLocationId, $data['name']);
             $this->jsonResponse(['success' => true, 'id' => $id]);
         }
     }
@@ -28,7 +29,7 @@ class InventoryController extends BaseController {
     public function add() {
         if ($this->getRequestMethod() === 'POST') {
             $data = $this->getPostData();
-            $id = $this->model->add($data);
+            $id = $this->model->add($this->currentLocationId, $data);
             $this->jsonResponse(['success' => true, 'id' => $id]);
         }
     }
@@ -38,7 +39,7 @@ class InventoryController extends BaseController {
             $data = $this->getPostData();
             $id = $data['id'];
             unset($data['id']);
-            $this->model->update($id, $data);
+            $this->model->update($this->currentLocationId, $id, $data);
             $this->jsonResponse(['success' => true]);
         }
     }
@@ -47,7 +48,7 @@ class InventoryController extends BaseController {
         if ($this->getRequestMethod() === 'POST') {
             $data = $this->getPostData();
             try {
-                $this->model->delete($data['id']);
+                $this->model->delete($this->currentLocationId, $data['id']);
                 $this->jsonResponse(['success' => true]);
             } catch (\Exception $e) {
                 $this->jsonResponse(['error' => $e->getMessage()]);
@@ -59,9 +60,8 @@ class InventoryController extends BaseController {
         if ($this->getRequestMethod() === 'POST') {
             $data = $this->getPostData();
             try {
-                // Support both 'amount' and 'purchase_amount' for compatibility
                 $amount = $data['purchase_amount'] ?? $data['amount'];
-                $this->model->restock($data['id'], $amount, $data['reason'] ?? 'Restock');
+                $this->model->restock($this->currentLocationId, $data['id'], $amount, $data['reason'] ?? 'Restock');
                 $this->jsonResponse(['success' => true]);
             } catch (\Exception $e) {
                 $this->jsonResponse(['error' => $e->getMessage()]);
@@ -70,6 +70,6 @@ class InventoryController extends BaseController {
     }
     
     public function logs() {
-        $this->jsonResponse($this->model->getLogs());
+        $this->jsonResponse($this->model->getLogs($this->currentLocationId));
     }
 }

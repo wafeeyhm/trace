@@ -20,11 +20,17 @@ use Trace\Controllers\MenuController;
 use Trace\Controllers\InventoryController;
 use Trace\Controllers\TransactionController;
 use Trace\Controllers\CatalogController;
+use Trace\Controllers\AuthController;
 
 header("Content-Type: application/json");
 
 // Initialize Router
 $router = new Router();
+
+// --- Auth ---
+$router->add('login', AuthController::class, 'login');
+$router->add('logout', AuthController::class, 'logout');
+$router->add('get_me', AuthController::class, 'me');
 
 // --- Menu ---
 $router->add('get_menu', MenuController::class, 'list');
@@ -42,6 +48,7 @@ $router->add('get_inventory_logs', InventoryController::class, 'logs');
 
 // --- Transactions & Analytics ---
 $router->add('process_order', TransactionController::class, 'processOrder');
+$router->add('add_waste', TransactionController::class, 'addWaste');
 $router->add('get_analytics', TransactionController::class, 'analytics');
 $router->add('get_pending_orders', TransactionController::class, 'pendingOrders');
 $router->add('update_kds_status', TransactionController::class, 'updateKdsStatus');
