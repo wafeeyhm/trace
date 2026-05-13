@@ -30,6 +30,13 @@
 - **Thermal Receipt Printing**: `window.print()` with 80mm thermal-optimized `@media print` CSS. Auto-triggers on checkout.
 - **High-Contrast Theme**: Gold-accent, near-black theme toggled from the sidebar. Persisted to localStorage.
 
+### 🔎 Phase Three — The Lens (Back Office & Analytics)
+- **Dynamic COGS Reporting**: Calculate profit margins in real-time based on the most recent supplier prices. No more manual paper math.
+- **Peak Hour Analytics**: Sales distribution chart shows busiest hours to optimize staffing.
+- **Revenue vs. Waste Tracking**: Comparative time-series data to track financial loss from inventory waste.
+- **Mobile-First Dashboard**: Fully responsive analytics grid with glassmorphism aesthetics and micro-animations.
+- **Responsive Sidebar**: Navigation automatically adapts for mobile/tablet screens.
+
 ---
 
 ## 🏛️ Architecture
@@ -82,7 +89,7 @@ trace/
 | `process_order` | POST | Atomic checkout + stock deduction + KDS queue |
 | `get_pending_orders` | GET | KDS: all pending/preparing orders with items |
 | `update_kds_status` | POST | KDS: pending → preparing → done |
-| `get_analytics` | GET | Revenue, tax, expenses, net profit in BND |
+| `get_analytics` | GET | Revenue, COGS, Waste, Tax, Expenses, Net Profit, Trend, Peak Hours |
 
 ---
 
@@ -125,3 +132,7 @@ http://localhost/trace/api/scripts/update_units_db.php
 | KDS order timers (green/amber/red) | ✅ |
 | Thermal `window.print()` receipt | ✅ |
 | High-contrast gold theme | ✅ |
+| Dynamic COGS & Real-time margins | ✅ |
+| Peak Hour sales distribution | ✅ |
+| Revenue vs. Waste charting | ✅ |
+| Mobile-responsive back office | ✅ |
