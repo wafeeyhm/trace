@@ -1,13 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+/* ─── Themes ──────────────────────────────────────────────────────────── */
 :root, body[data-theme="cyber-trace"] {
     --color-bg: 15 23 42;
     --color-text: 248 250 252;
     --color-accent: 0 245 255;
-    --color-secondary: 51 65 85;
+    --color-secondary: 71 85 105;
     --color-danger: 244 63 94;
     --color-success: 16 185 129;
     --color-glass-bg: 30 41 59;
+    --color-amber: 251 191 36;
 }
 
 body[data-theme="botanical"] {
@@ -18,6 +20,7 @@ body[data-theme="botanical"] {
     --color-danger: 217 144 91;
     --color-success: 95 116 100;
     --color-glass-bg: 255 255 255;
+    --color-amber: 180 130 50;
 }
 
 body[data-theme="xau"] {
@@ -25,9 +28,10 @@ body[data-theme="xau"] {
     --color-text: 255 255 255;
     --color-accent: 197 160 89;
     --color-secondary: 42 42 42;
-    --color-danger: 239 68 64; 
+    --color-danger: 239 68 64;
     --color-success: 78 159 61;
     --color-glass-bg: 30 30 30;
+    --color-amber: 197 160 89;
 }
 
 body[data-theme="desert"] {
@@ -35,18 +39,239 @@ body[data-theme="desert"] {
     --color-text: 63 66 56;
     --color-accent: 107 112 92;
     --color-secondary: 165 165 141;
-    --color-danger: 200 80 50; 
+    --color-danger: 200 80 50;
     --color-success: 107 112 92;
     --color-glass-bg: 240 220 200;
+    --color-amber: 160 110 40;
 }
 
-body { font-family: 'Inter', sans-serif; background-color: rgb(var(--color-bg)); color: rgb(var(--color-text)); overflow: hidden; }
-.glass { background: rgb(var(--color-glass-bg) / 0.7); backdrop-filter: blur(12px); border: 1px solid rgb(var(--color-text) / 0.1); }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.active-tab { border-bottom: 2px solid rgb(var(--color-accent)); color: rgb(var(--color-accent)); }
+/* ─── Base ────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+    overflow: hidden;
+}
 
-/* Custom Scrollbar for non-hidden areas */
-::-webkit-scrollbar { width: 6px; }
+.glass {
+    background: rgb(var(--color-glass-bg) / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgb(var(--color-text) / 0.08);
+}
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgb(var(--color-text) / 0.1); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgb(var(--color-text) / 0.2); }
+
+/* ─── Tab system ──────────────────────────────────────────────────────── */
+.active-tab { border-bottom: 2px solid rgb(var(--color-accent)); color: rgb(var(--color-accent)); }
+
+/* ─── Sidebar (desktop) ───────────────────────────────────────────────── */
+#sidebar {
+    width: 5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 0;
+    gap: 2rem;
+    border-right: 1px solid rgb(var(--color-text) / 0.05);
+    z-index: 50;
+    flex-shrink: 0;
+}
+
+/* ─── Range Selector ──────────────────────────────────────────────────── */
+.range-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(var(--color-text) / 0.45);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+}
+.range-btn:hover { color: rgb(var(--color-text) / 0.8); }
+.active-range {
+    background: rgb(var(--color-accent) / 0.15);
+    color: rgb(var(--color-accent));
+}
+
+/* ─── KPI Cards ───────────────────────────────────────────────────────── */
+.kpi-card {
+    padding: 1.25rem 1.5rem;
+    border-radius: 1.25rem;
+    transition: transform 0.2s ease;
+}
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgb(var(--color-text) / 0.4);
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.kpi-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+.kpi-sub {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgb(var(--color-text) / 0.35);
+    margin-top: 0.3rem;
+}
+
+/* ─── Chart containers ────────────────────────────────────────────────── */
+.chart-card {
+    border-radius: 1.75rem;
+    padding: 1.5rem;
+}
+.chart-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgb(var(--color-text) / 0.4);
+    margin-bottom: 0.25rem;
+}
+.chart-subtitle {
+    font-size: 1rem;
+    font-weight: 900;
+    margin-bottom: 1.25rem;
+}
+
+/* ─── COGS table ──────────────────────────────────────────────────────── */
+.margin-bar-track {
+    height: 4px;
+    background: rgb(var(--color-text) / 0.06);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.margin-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s ease;
+}
+
+/* ─── Skeleton loader ─────────────────────────────────────────────────── */
+@keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+.skeleton {
+    background: linear-gradient(90deg,
+        rgb(var(--color-text) / 0.05) 25%,
+        rgb(var(--color-text) / 0.12) 50%,
+        rgb(var(--color-text) / 0.05) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 0.5rem;
+}
+
+/* ─── Peak hour badge ─────────────────────────────────────────────────── */
+.peak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 99px;
+    background: rgb(var(--color-accent) / 0.12);
+    color: rgb(var(--color-accent));
+}
+
+/* ─── MOBILE FIRST (<1024px) ──────────────────────────────────────────── */
+@media (max-width: 1023px) {
+    body { overflow: auto; }
+
+    /* Sidebar becomes a fixed bottom nav bar */
+    #sidebar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        width: 100%;
+        height: 64px;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 1.5rem;
+        gap: 0;
+        border-right: none;
+        border-top: 1px solid rgb(var(--color-text) / 0.07);
+    }
+
+    /* Adjust app shell */
+    .app-shell {
+        flex-direction: column !important;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    /* Main content area scrolls and has bottom padding for the nav */
+    .main-area {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 80px;
+    }
+
+    /* Analytics page spacing */
+    #analytics-page .dash-grid-content {
+        padding: 1rem;
+    }
+
+    /* KPI cards: 2 columns on mobile */
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.6rem !important;
+    }
+
+    .kpi-value { font-size: 1.2rem; }
+
+    /* Charts stack vertically */
+    .charts-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Back-office main content */
+    #backoffice-page, #settings-page {
+        padding: 1rem !important;
+    }
+    #backoffice-page header, #settings-page header {
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Tables: horizontal scroll */
+    .glass.rounded-3xl { overflow-x: auto; }
+
+    /* Header font */
+    #backoffice-page h1, #analytics-page h1 {
+        font-size: 1.75rem !important;
+    }
+
+    /* Hide sidebar logo text */
+    .sidebar-logo-text { display: none; }
+}
+
+/* ─── Small mobile tweaks (<640px) ───────────────────────────────────── */
+@media (max-width: 639px) {
+    .kpi-value { font-size: 1rem; }
+    .kpi-label { font-size: 0.55rem; }
+    .chart-card { padding: 1rem; }
+    .chart-subtitle { font-size: 0.85rem; }
+}

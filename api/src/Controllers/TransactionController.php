@@ -25,6 +25,16 @@ class TransactionController extends BaseController {
         $this->jsonResponse($this->model->getAnalytics($range));
     }
 
+    public function peakHours() {
+        $range = $_GET['range'] ?? 'month';
+        $this->jsonResponse($this->model->getPeakHours($range));
+    }
+
+    public function cogsReport() {
+        $range = $_GET['range'] ?? 'month';
+        $this->jsonResponse($this->model->getCogsReport($range));
+    }
+
     public function pendingOrders() {
         $this->jsonResponse($this->model->getPendingOrders());
     }

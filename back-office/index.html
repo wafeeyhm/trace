@@ -31,11 +31,11 @@
         }
     </script>
 </head>
-<body class="h-screen flex overflow-hidden">
+<body class="h-screen flex overflow-hidden app-shell">
 
-    <!-- Sidebar Navigation -->
-    <aside class="w-20 glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50">
-        <div class="text-accent text-2xl"><i class="fas fa-bolt"></i></div>
+    <!-- Sidebar / Bottom Nav -->
+    <aside id="sidebar" class="glass flex flex-col items-center py-8 gap-8 border-r border-white/5 z-50">
+        <div class="text-accent text-2xl sidebar-logo"><i class="fas fa-bolt"></i></div>
         <nav class="flex flex-col gap-6">
             <a href="../pos/index.html" class="nav-btn text-slate-500 hover:text-white" title="Register"><i class="fas fa-th-large text-xl"></i></a>
             <button onclick="switchTab('backoffice')" class="nav-btn text-accent" title="Management"><i class="fas fa-cog text-xl"></i></button>
@@ -45,7 +45,7 @@
     </aside>
 
     <!-- Page: Back Office (Management) -->
-    <main id="backoffice-page" class="flex-1 p-12 overflow-y-auto bg-slate-950">
+    <main id="backoffice-page" class="flex-1 p-12 overflow-y-auto bg-slate-950 main-area">
         <header class="mb-12 flex justify-between items-end">
             <div>
                 <h1 class="text-4xl font-black mb-4">Trace Lens</h1>
@@ -97,46 +97,148 @@
         </div>
     </main>
 
-    <!-- Page: Analytics -->
-    <div id="analytics-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950">
-        <header class="mb-12 flex justify-between items-end">
-            <div>
-                <h1 class="text-4xl font-black mb-4">Performance</h1>
-                <div class="flex gap-8 text-xs font-black uppercase tracking-[0.2em]">
-                    <button onclick="switchPerformance('sales')" id="tab-perf-sales" class="perf-tab active-tab pb-2">Sales Reports</button>
-                    <button onclick="switchPerformance('taxes')" id="tab-perf-taxes" class="perf-tab pb-2">Tax Management</button>
-                    <button onclick="switchPerformance('expenses')" id="tab-perf-expenses" class="perf-tab pb-2">Expense Tracking</button>
-                    <button onclick="switchPerformance('forecast')" id="tab-perf-forecast" class="perf-tab pb-2">Profit Forecast</button>
+    <!-- Page: Analytics (Phase 3 Dashboard) -->
+    <div id="analytics-page" class="hidden flex-1 overflow-y-auto bg-slate-950 main-area">
+
+        <!-- Sticky header: tabs + range selector -->
+        <div class="sticky top-0 z-30 glass border-b border-white/5 px-6 lg:px-10 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex gap-5 text-[10px] font-black uppercase tracking-[0.18em]">
+                <button onclick="switchPerformance('dashboard')" id="tab-perf-dashboard" class="perf-tab active-tab pb-1">Dashboard</button>
+                <button onclick="switchPerformance('cogs')"      id="tab-perf-cogs"      class="perf-tab pb-1">COGS Report</button>
+                <button onclick="switchPerformance('taxes')"     id="tab-perf-taxes"     class="perf-tab pb-1">Taxes</button>
+                <button onclick="switchPerformance('expenses')"  id="tab-perf-expenses"  class="perf-tab pb-1">Expenses</button>
+            </div>
+            <div class="flex gap-1 bg-white/5 p-1 rounded-xl" id="range-selector">
+                <button onclick="setRange('day')"   id="range-day"   class="range-btn">Today</button>
+                <button onclick="setRange('month')" id="range-month" class="range-btn active-range">Month</button>
+                <button onclick="setRange('year')"  id="range-year"  class="range-btn">Year</button>
+            </div>
+            <button id="add-perf-btn" class="hidden bg-accent text-slate-950 px-5 py-2 rounded-xl font-bold text-xs shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-1"></i>Add New</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="perf-dashboard" class="p-6 lg:p-10 space-y-6">
+
+            <!-- KPI Cards -->
+            <div class="kpi-grid grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <div class="kpi-card glass">
+                    <div class="kpi-label"><i class="fas fa-dollar-sign"></i> Revenue</div>
+                    <div class="kpi-value" id="kpi-rev">—</div>
+                    <div class="kpi-sub">gross sales</div>
+                </div>
+                <div class="kpi-card glass">
+                    <div class="kpi-label" style="color:rgb(var(--color-amber)/0.7)"><i class="fas fa-boxes"></i> COGS</div>
+                    <div class="kpi-value" id="kpi-cogs" style="color:rgb(var(--color-amber))">—</div>
+                    <div class="kpi-sub">ingredient cost</div>
+                </div>
+                <div class="kpi-card glass">
+                    <div class="kpi-label" style="color:rgb(var(--color-success)/0.7)"><i class="fas fa-chart-line"></i> Gross Profit</div>
+                    <div class="kpi-value" id="kpi-gross" style="color:rgb(var(--color-success))">—</div>
+                    <div class="kpi-sub">rev minus COGS</div>
+                </div>
+                <div class="kpi-card glass" style="border-color:rgb(var(--color-accent)/0.2)">
+                    <div class="kpi-label" style="color:rgb(var(--color-accent)/0.7)"><i class="fas fa-percent"></i> Gross Margin</div>
+                    <div class="kpi-value" id="kpi-margin" style="color:rgb(var(--color-accent))">—</div>
+                    <div class="kpi-sub">of revenue</div>
+                </div>
+                <div class="kpi-card glass">
+                    <div class="kpi-label" style="color:rgb(var(--color-danger)/0.7)"><i class="fas fa-receipt"></i> Expenses</div>
+                    <div class="kpi-value" id="kpi-exp" style="color:rgb(var(--color-danger))">—</div>
+                    <div class="kpi-sub">operating costs</div>
+                </div>
+                <div class="kpi-card glass" style="border-color:rgb(var(--color-accent)/0.2)">
+                    <div class="kpi-label" style="color:rgb(var(--color-accent)/0.7)"><i class="fas fa-trophy"></i> Net Profit</div>
+                    <div class="kpi-value" id="kpi-net" style="color:rgb(var(--color-accent))">—</div>
+                    <div class="kpi-sub">rev minus expenses</div>
                 </div>
             </div>
-            <button id="add-perf-btn" class="hidden bg-accent text-slate-950 px-6 py-3 rounded-xl font-bold text-sm shadow-xl hover:scale-105 transition-transform"><i class="fas fa-plus mr-2"></i>Add New</button>
-        </header>
 
-        <div id="perf-sales" class="space-y-8">
-            <div class="grid grid-cols-4 gap-8 mb-8">
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Revenue</p><h2 id="ana-rev" class="text-4xl font-black text-white">BND $0.00</h2></div>
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Tax</p><h2 id="ana-tax" class="text-4xl font-black text-emerald-400">BND $0.00</h2></div>
-                <div class="glass p-8 rounded-3xl"><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Expenses</p><h2 id="ana-expenses" class="text-4xl font-black text-red-400">BND $0.00</h2></div>
-                <div class="glass p-8 rounded-3xl border border-accent/30"><p class="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Net Profit</p><h2 id="ana-net" class="text-4xl font-black text-accent">BND $0.00</h2></div>
+            <!-- Charts Row -->
+            <div class="charts-row grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <!-- Revenue vs COGS chart (2/3 width) -->
+                <div class="xl:col-span-2 chart-card glass">
+                    <div class="chart-title"><i class="fas fa-chart-bar mr-1"></i> Revenue vs Cost</div>
+                    <div class="chart-subtitle">Daily Trend</div>
+                    <canvas id="revenueChart" height="110"></canvas>
+                </div>
+                <!-- Peak Hours chart (1/3 width) -->
+                <div class="chart-card glass">
+                    <div class="chart-title"><i class="fas fa-clock mr-1"></i> Peak Hours</div>
+                    <div class="chart-subtitle">Orders by Hour <span id="peak-badge" class="peak-badge hidden"><i class="fas fa-fire"></i> <span id="peak-hour-label"></span></span></div>
+                    <canvas id="peakHoursChart" height="220"></canvas>
+                </div>
             </div>
-            <div class="glass p-12 rounded-[40px]"><canvas id="mainChart" height="100"></canvas></div>
+
+            <!-- Quick COGS table preview -->
+            <div class="glass rounded-[1.5rem] overflow-hidden">
+                <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-widest" style="color:rgb(var(--color-text)/0.4)">Top Products</div>
+                        <div class="font-black text-sm mt-0.5">COGS Breakdown</div>
+                    </div>
+                    <button onclick="switchPerformance('cogs')" class="text-[10px] font-black uppercase tracking-widest" style="color:rgb(var(--color-accent))">View All →</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[640px]">
+                        <thead class="bg-white/5 text-[9px] uppercase font-black tracking-widest" style="color:rgb(var(--color-text)/0.35)">
+                            <tr>
+                                <th class="px-6 py-3">Product</th>
+                                <th class="px-6 py-3 text-right">Sold</th>
+                                <th class="px-6 py-3 text-right">Revenue</th>
+                                <th class="px-6 py-3 text-right">COGS</th>
+                                <th class="px-6 py-3 text-right">Profit</th>
+                                <th class="px-6 py-3" style="min-width:120px">Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-cogs-table" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div id="perf-taxes" class="hidden space-y-4">
-            <div class="glass rounded-3xl overflow-hidden">
-                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Tax Name</th><th class="px-8 py-5">Rate (%)</th><th class="px-8 py-5">Status</th><th class="px-8 py-5 text-right">Actions</th></tr></thead><tbody id="perf-taxes-table" class="divide-y divide-white/5"></tbody></table>
+        <!-- COGS Report Tab -->
+        <div id="perf-cogs" class="hidden p-6 lg:p-10">
+            <div class="glass rounded-[1.5rem] overflow-hidden">
+                <div class="px-6 py-5 border-b border-white/5">
+                    <div class="text-[10px] font-black uppercase tracking-widest" style="color:rgb(var(--color-text)/0.4)">Full Report</div>
+                    <div class="font-black text-lg mt-0.5">Product COGS &amp; Margin Analysis</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[700px]">
+                        <thead class="bg-white/5 text-[9px] uppercase font-black tracking-widest" style="color:rgb(var(--color-text)/0.35)">
+                            <tr>
+                                <th class="px-6 py-4">Product / Variant</th>
+                                <th class="px-6 py-4 text-right">Sold</th>
+                                <th class="px-6 py-4 text-right">Selling Price</th>
+                                <th class="px-6 py-4 text-right">Revenue</th>
+                                <th class="px-6 py-4 text-right">COGS</th>
+                                <th class="px-6 py-4 text-right">Gross Profit</th>
+                                <th class="px-6 py-4" style="min-width:140px">Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="full-cogs-table" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div id="perf-expenses" class="hidden space-y-4">
-            <div class="glass rounded-3xl overflow-hidden">
-                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold text-slate-400"><tr><th class="px-8 py-5">Date</th><th class="px-8 py-5">Description</th><th class="px-8 py-5">Amount</th></tr></thead><tbody id="perf-expenses-table" class="divide-y divide-white/5"></tbody></table>
+        <!-- Taxes Tab -->
+        <div id="perf-taxes" class="hidden p-6 lg:p-10 space-y-4">
+            <div class="glass rounded-[1.5rem] overflow-hidden">
+                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold" style="color:rgb(var(--color-text)/0.4)"><tr><th class="px-8 py-5">Tax Name</th><th class="px-8 py-5">Rate (%)</th><th class="px-8 py-5">Status</th><th class="px-8 py-5 text-right">Actions</th></tr></thead><tbody id="perf-taxes-table" class="divide-y divide-white/5"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Expenses Tab -->
+        <div id="perf-expenses" class="hidden p-6 lg:p-10 space-y-4">
+            <div class="glass rounded-[1.5rem] overflow-hidden">
+                <table class="w-full text-left"><thead class="bg-white/5 text-[10px] uppercase font-bold" style="color:rgb(var(--color-text)/0.4)"><tr><th class="px-8 py-5">Date</th><th class="px-8 py-5">Description</th><th class="px-8 py-5">Amount</th></tr></thead><tbody id="perf-expenses-table" class="divide-y divide-white/5"></tbody></table>
             </div>
         </div>
     </div>
 
     <!-- Page: Settings -->
-    <div id="settings-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950">
+    <div id="settings-page" class="hidden flex-1 p-12 overflow-y-auto bg-slate-950 main-area">
         <header class="mb-12"><h1 class="text-4xl font-black mb-4">Settings</h1></header>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
             <button onclick="setTheme('botanical')" class="glass p-8 rounded-3xl text-left hover:scale-105 transition-all"><div class="w-12 h-12 rounded-full mb-6" style="background-color: rgb(95, 116, 100);"></div><h3 class="text-lg font-black">Botanical</h3></button>

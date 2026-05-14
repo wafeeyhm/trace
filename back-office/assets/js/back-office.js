@@ -1,15 +1,16 @@
 // Trace Lens (Back Office) Specific Logic
 let activeBackOfficeTab = 'ingredients';
-let activePerformanceTab = 'sales';
+let activePerformanceTab = 'dashboard';
 let analyticsData = {};
-let mainChart = null;
+let revenueChart = null;
+let peakHoursChart = null;
+let currentRange = 'month';
 let activeVariantId = null;
 
 async function initLens() {
     try {
         await refreshCoreData();
         renderBackOffice();
-        renderPerformance();
     } catch (e) {
         console.error("Lens Init Error:", e);
     }
@@ -30,7 +31,7 @@ function switchTab(p) {
     });
     
     if (p === 'backoffice') renderBackOffice();
-    if (p === 'analytics') renderPerformance();
+    if (p === 'analytics') loadDashboard(currentRange);
 }
 
 function switchBackOffice(tab) {
@@ -49,18 +50,45 @@ function switchBackOffice(tab) {
 function switchPerformance(tab) {
     activePerformanceTab = tab;
     document.querySelectorAll('.perf-tab').forEach(t => t.classList.remove('active-tab'));
-    const targetTab = document.getElementById(`tab-perf-${tab}`);
-    if (targetTab) targetTab.classList.add('active-tab');
-    
-    ['sales', 'taxes', 'expenses', 'forecast'].forEach(t => {
-        const el = document.getElementById(`perf-${t}`);
-        if (el) el.classList.toggle('hidden', t !== tab);
+    const el = document.getElementById(`tab-perf-${tab}`);
+    if (el) el.classList.add('active-tab');
+    ['dashboard','cogs','taxes','expenses'].forEach(t => {
+        const p = document.getElementById(`perf-${t}`);
+        if (p) p.classList.toggle('hidden', t !== tab);
     });
-    
     const addBtn = document.getElementById('add-perf-btn');
-    if (addBtn) addBtn.classList.toggle('hidden', tab === 'sales' || tab === 'forecast');
-    
-    renderPerformance();
+    if (addBtn) addBtn.classList.toggle('hidden', tab !== 'taxes' && tab !== 'expenses');
+    if (tab === 'dashboard') loadDashboard(currentRange);
+    else if (tab === 'cogs') loadCogsReport(currentRange);
+    else if (tab === 'taxes') renderTaxes();
+    else if (tab === 'expenses') renderExpenses();
+}
+
+function setRange(range) {
+    currentRange = range;
+    ['day','month','year'].forEach(r => {
+        const b = document.getElementById(`range-${r}`);
+        if (b) b.classList.toggle('active-range', r === range);
+    });
+    if (activePerformanceTab === 'dashboard') loadDashboard(range);
+    else if (activePerformanceTab === 'cogs') loadCogsReport(range);
+}
+
+function renderTaxes() {
+    const tb = document.getElementById('perf-taxes-table');
+    if (!tb) return;
+    tb.innerHTML = taxes.map(t => `<tr class="hover:bg-white/5">
+        <td class="px-8 py-5 font-bold">${t.name}</td>
+        <td class="px-8 py-5 text-xs font-bold" style="color:rgb(var(--color-text)/0.5)">${t.rate}%</td>
+        <td class="px-8 py-5 text-xs"><span class="px-2 py-1 rounded uppercase font-black text-[8px] ${t.is_active==1?'bg-emerald-500/10 text-emerald-400':'bg-red-500/10 text-red-400'}">${t.is_active==1?'Active':'Inactive'}</span></td>
+        <td class="px-8 py-5 text-right"><button onclick="toggleTax(${t.id})" class="text-sky-400 p-2"><i class="fas fa-toggle-${t.is_active==1?'on':'off'}"></i></button></td>
+    </tr>`).join('');
+}
+
+function renderExpenses() {
+    const tb = document.getElementById('perf-expenses-table');
+    if (!tb) return;
+    tb.innerHTML = expenses.map(e => `<tr><td class="px-8 py-5 text-xs font-mono" style="color:rgb(var(--color-text)/0.5)">${e.expense_date}</td><td class="px-8 py-5 font-bold">${e.description}</td><td class="px-8 py-5 text-xs font-bold" style="color:rgb(var(--color-danger))">BND $${parseFloat(e.amount).toFixed(2)}</td></tr>`).join('');
 }
 
 // Rendering
@@ -146,58 +174,145 @@ async function renderBackOffice() {
     }
 }
 
-function renderPerformance() {
-    if (activePerformanceTab === 'sales') {
-        loadAnalytics('month');
-    } else if (activePerformanceTab === 'taxes') {
-        const tBody = document.getElementById('perf-taxes-table');
-        if (tBody) {
-            tBody.innerHTML = taxes.map(t => `<tr class="hover:bg-white/5">
-                <td class="px-8 py-5 font-bold text-slate-100">${t.name}</td>
-                <td class="px-8 py-5 text-xs text-slate-400 font-bold">${t.rate}%</td>
-                <td class="px-8 py-5 text-xs"><span class="px-2 py-1 rounded ${t.is_active == 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'} uppercase font-black text-[8px]">${t.is_active == 1 ? 'Active' : 'Inactive'}</span></td>
-                <td class="px-8 py-5 text-right"><button onclick="toggleTax(${t.id})" class="text-sky-400 p-2"><i class="fas fa-toggle-${t.is_active == 1 ? 'on' : 'off'}"></i></button></td>
-            </tr>`).join('');
-        }
-    } else if (activePerformanceTab === 'expenses') {
-        const eBody = document.getElementById('perf-expenses-table');
-        if (eBody) {
-            eBody.innerHTML = expenses.map(e => `<tr><td class="px-8 py-5 text-xs text-slate-400 font-mono">${e.expense_date}</td><td class="px-8 py-5 font-bold text-slate-100">${e.description}</td><td class="px-8 py-5 text-xs text-red-400 font-bold">BND $${e.amount}</td></tr>`).join('');
-        }
-    } else if (activePerformanceTab === 'forecast') {
-        loadAnalytics('month').then(() => updateForecast());
-    }
-}
-
-async function loadAnalytics(range) {
+async function loadDashboard(range) {
     try {
-        const d = await fetchJSON(`../api/?action=get_analytics&range=${range}`);
-        analyticsData = d;
-        document.getElementById('ana-rev').textContent = `BND $${d.revenue.toFixed(2)}`;
-        document.getElementById('ana-tax').textContent = `BND $${d.tax_collected.toFixed(2)}`;
-        document.getElementById('ana-expenses').textContent = `BND $${d.expenses.toFixed(2)}`;
-        document.getElementById('ana-net').textContent = `BND $${d.net_profit.toFixed(2)}`;
-
-        const canvas = document.getElementById('mainChart');
-        if (!canvas) return;
-        if (mainChart) mainChart.destroy();
-        
-        const accent = getComputedStyle(document.body).getPropertyValue('--color-accent').trim();
-        mainChart = new Chart(canvas.getContext('2d'), { 
-            type: 'line', 
-            data: { 
-                labels: (d.trend || []).map(x => x.day), 
-                datasets: [{ label: 'Revenue', data: (d.trend || []).map(x => x.rev), borderColor: `rgb(${accent})`, backgroundColor: `rgba(${accent.split(' ').join(',')}, 0.1)`, fill: true, tension: 0.4 }] 
-            }, 
-            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } }, x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } } } } 
-        });
-    } catch (e) { console.error("Analytics error", e); }
+        const [analytics, peakHours, cogsData] = await Promise.all([
+            fetchJSON(`../api/?action=get_analytics&range=${range}`),
+            fetchJSON(`../api/?action=get_peak_hours&range=${range}`),
+            fetchJSON(`../api/?action=get_cogs_report&range=${range}`)
+        ]);
+        analyticsData = analytics;
+        renderKPIs(analytics);
+        renderRevenueChart(analytics);
+        renderPeakHoursChart(peakHours);
+        renderCogsRows(cogsData, 'dash-cogs-table', 6);
+    } catch(e) { console.error('Dashboard error', e); }
 }
 
-function updateForecast() {
-    const volume = parseInt(document.getElementById('forecast-volume').value);
-    document.getElementById('forecast-volume-val').textContent = volume;
-    // ... simplified forecast logic ...
+async function loadCogsReport(range) {
+    try {
+        const data = await fetchJSON(`../api/?action=get_cogs_report&range=${range}`);
+        renderCogsRows(data, 'full-cogs-table', null);
+    } catch(e) { console.error('COGS report error', e); }
+}
+
+function renderKPIs(d) {
+    const fmt = v => `BND $${parseFloat(v).toFixed(2)}`;
+    const gross = d.revenue - d.cogs;
+    const margin = d.revenue > 0 ? (gross / d.revenue * 100) : 0;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('kpi-rev',    fmt(d.revenue));
+    set('kpi-cogs',   fmt(d.cogs));
+    set('kpi-gross',  fmt(gross));
+    set('kpi-margin', margin.toFixed(1) + '%');
+    set('kpi-exp',    fmt(d.expenses));
+    set('kpi-net',    fmt(d.net_profit));
+}
+
+function renderRevenueChart(d) {
+    const canvas = document.getElementById('revenueChart');
+    if (!canvas) return;
+    if (revenueChart) revenueChart.destroy();
+    const cs = getComputedStyle(document.body);
+    const accent = cs.getPropertyValue('--color-accent').trim().split(' ');
+    const amber  = cs.getPropertyValue('--color-amber').trim().split(' ');
+    const danger = cs.getPropertyValue('--color-danger').trim().split(' ');
+    const toRgb  = (c, a) => `rgba(${c.join(',')},${a})`;
+    const labels = (d.trend||[]).map(x => x.day);
+    revenueChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Revenue',  data: (d.trend||[]).map(x=>x.rev), backgroundColor: toRgb(accent, 0.7), borderRadius: 4 },
+                { label: 'Expenses', data: (d.trend||[]).map(x=>x.exp), backgroundColor: toRgb(danger, 0.55), borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: `rgba(${getComputedStyle(document.body).getPropertyValue('--color-text').trim().split(' ').join(',')},0.5)`, boxWidth: 10, font: { size: 10, weight: '800' } } } },
+            scales: {
+                y: { grid: { color: 'rgba(128,128,128,0.08)' }, ticks: { color: 'rgba(128,128,128,0.6)', font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(128,128,128,0.6)', font: { size: 9 }, maxRotation: 45 } }
+            }
+        }
+    });
+}
+
+function renderPeakHoursChart(data) {
+    const canvas = document.getElementById('peakHoursChart');
+    if (!canvas) return;
+    if (peakHoursChart) peakHoursChart.destroy();
+    const fmtHour = h => { const s = h % 12 || 12; return `${s}${h<12?'am':'pm'}`; };
+    const maxOrders = Math.max(...data.map(r => +r.orders), 1);
+    const colors = data.map(r => {
+        const ratio = +r.orders / maxOrders;
+        const r1 = Math.round(0 + ratio * 251),
+              g1 = Math.round(245 - ratio * 54),
+              b1 = Math.round(255 - ratio * 219);
+        return `rgba(${r1},${g1},${b1},0.75)`;
+    });
+    // Find peak hour
+    if (data.length > 0) {
+        const peak = data.reduce((a,b) => +b.orders > +a.orders ? b : a);
+        const badge = document.getElementById('peak-badge');
+        const lbl   = document.getElementById('peak-hour-label');
+        if (badge && lbl) { lbl.textContent = fmtHour(+peak.hour) + ' peak'; badge.classList.remove('hidden'); }
+    }
+    peakHoursChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.map(r => fmtHour(+r.hour)),
+            datasets: [{ label: 'Orders', data: data.map(r => r.orders), backgroundColor: colors, borderRadius: 6 }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (ctx) => {
+                const rev = data[ctx.dataIndex]?.revenue;
+                return rev ? `Revenue: BND $${parseFloat(rev).toFixed(2)}` : '';
+            }}}},
+            scales: {
+                x: { grid: { color: 'rgba(128,128,128,0.08)' }, ticks: { color: 'rgba(128,128,128,0.6)', font: { size: 9 } } },
+                y: { grid: { display: false }, ticks: { color: 'rgba(128,128,128,0.6)', font: { size: 9, weight: '700' } } }
+            }
+        }
+    });
+}
+
+function renderCogsRows(data, tableId, limit) {
+    const tb = document.getElementById(tableId);
+    if (!tb) return;
+    const rows = limit ? data.slice(0, limit) : data;
+    const isCompact = (tableId === 'dash-cogs-table');
+    tb.innerHTML = rows.map(r => {
+        const rev    = parseFloat(r.revenue);
+        const cogs   = parseFloat(r.cogs);
+        const profit = parseFloat(r.gross_profit);
+        const margin = rev > 0 ? (profit / rev * 100) : 0;
+        const mColor = margin >= 60 ? 'var(--color-success)' : margin >= 35 ? 'var(--color-amber)' : 'var(--color-danger)';
+        const barFill = `<div class="margin-bar-track"><div class="margin-bar-fill" style="width:${Math.min(margin,100).toFixed(1)}%;background:rgb(${mColor})"></div></div>`;
+        if (isCompact) {
+            return `<tr class="hover:bg-white/5 transition-colors">
+                <td class="px-6 py-3"><div class="font-bold text-sm">${r.item_name}</div><div class="text-[9px] font-black uppercase" style="color:rgb(var(--color-text)/0.35)">${r.variant_name}</div></td>
+                <td class="px-6 py-3 text-right text-xs font-mono font-bold">${r.units_sold}</td>
+                <td class="px-6 py-3 text-right text-xs font-mono">$${rev.toFixed(2)}</td>
+                <td class="px-6 py-3 text-right text-xs font-mono" style="color:rgb(var(--color-amber))">$${cogs.toFixed(2)}</td>
+                <td class="px-6 py-3 text-right text-xs font-mono font-bold" style="color:rgb(var(--color-success))">$${profit.toFixed(2)}</td>
+                <td class="px-6 py-3" style="min-width:100px"><div class="text-xs font-black" style="color:rgb(${mColor})">${margin.toFixed(1)}%</div>${barFill}</td>
+            </tr>`;
+        }
+        return `<tr class="hover:bg-white/5 transition-colors">
+            <td class="px-6 py-4"><div class="font-bold">${r.item_name}</div><div class="text-[9px] font-black uppercase" style="color:rgb(var(--color-text)/0.35)">${r.variant_name}</div></td>
+            <td class="px-6 py-4 text-right text-xs font-mono font-bold">${r.units_sold}</td>
+            <td class="px-6 py-4 text-right text-xs font-mono">$${parseFloat(r.selling_price).toFixed(2)}</td>
+            <td class="px-6 py-4 text-right text-xs font-mono">$${rev.toFixed(2)}</td>
+            <td class="px-6 py-4 text-right text-xs font-mono" style="color:rgb(var(--color-amber))">$${cogs.toFixed(2)}</td>
+            <td class="px-6 py-4 text-right text-xs font-mono font-bold" style="color:rgb(var(--color-success))">$${profit.toFixed(2)}</td>
+            <td class="px-6 py-4" style="min-width:120px"><div class="text-xs font-black" style="color:rgb(${mColor})">${margin.toFixed(1)}%</div>${barFill}</td>
+        </tr>`;
+    }).join('');
+    if (rows.length === 0) tb.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-xs font-bold" style="color:rgb(var(--color-text)/0.3)">No sales data for this period.</td></tr>`;
 }
 
 // Unit Conversion Preview Logic
@@ -336,7 +451,7 @@ document.getElementById('restockForm').onsubmit = async (e) => {
 
 window.addEventListener('themeChanged', () => {
     if (!document.getElementById('analytics-page').classList.contains('hidden')) {
-        renderPerformance();
+        loadDashboard(currentRange);
     }
 });
 
